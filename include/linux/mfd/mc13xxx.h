@@ -73,7 +73,10 @@ enum mc13xxx_id {
 };
 
 struct mc13xxx {
-	struct spi_device *spidev;
+	union {
+		struct spi_device *spidev;
+		struct i2c_client *i2cclient;
+	};
 
 	struct device *dev;
 	enum mc13xxx_id ictype;
