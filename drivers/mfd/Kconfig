@@ -456,19 +456,35 @@ config MFD_PCF50633
 	  so that function-specific drivers can bind to them.
 
 config MFD_MC13783
-	tristate
-
-config MFD_MC13XXX
-	tristate "Support Freescale MC13783 and MC13892"
 	depends on SPI_MASTER
-	select MFD_CORE
-	select MFD_MC13783
+	select MFD_MC13XXX_SPI
+	tristate "Support for Freescale MC13783 PMIC"
 	help
-	  Support for the Freescale (Atlas) PMIC and audio CODECs
-	  MC13783 and MC13892.
-	  This driver provides common support for accessing  the device,
+	  Support for the Freescale MC13783 PMIC and audio CODEC.
+	  This driver provides common support for accessing the device,
 	  additional drivers must be enabled in order to use the
 	  functionality of the device.
+
+config MFD_MC13892
+	depends on SPI_MASTER || I2C
+	select MFD_MC13XXX
+	tristate "Support for Freescale MC13892 PMIC"
+	help
+	  Enable support for the Freescale MC13892 PMIC.
+	  As the MC13892 can connect by either I2C or SPI bus, you will
+	  also need to select which of these you would like to support.
+	  Additional drivers must be enabled in order to use the
+	  functionality of the device.
+
+config MFD_MC13XXX
+	tristate
+	depends on SPI_MASTER || I2C
+	select MFD_CORE
+
+config MFD_MC13XXX_SPI
+	tristate "Support Freescale MC13783 and MC13892 via SPI interface"
+	select MFD_MC13XXX
+	depends on SPI_MASTER && (MFD_MC13783 || MFD_MC13892)
 
 config PCF50633_ADC
 	tristate "Support for NXP PCF50633 ADC"
