@@ -66,6 +66,27 @@ int mc13xxx_get_flags(struct mc13xxx *mc13xxx);
 
 #define MC13XXX_NUM_IRQ		46
 
+enum mc13xxx_id {
+	MC13XXX_ID_MC13783,
+	MC13XXX_ID_MC13892,
+	MC13XXX_ID_INVALID,
+};
+
+struct mc13xxx {
+	struct spi_device *spidev;
+
+	struct device *dev;
+	enum mc13xxx_id ictype;
+
+	struct mutex lock;
+
+	int (*read_dev)(struct mc13xxx *, unsigned int, u32 *);
+	int (*write_dev)(struct mc13xxx *, unsigned int, u32);
+
+	irq_handler_t irqhandler[MC13XXX_NUM_IRQ];
+	void *irqdata[MC13XXX_NUM_IRQ];
+};
+
 struct regulator_init_data;
 
 struct mc13xxx_regulator_init_data {
