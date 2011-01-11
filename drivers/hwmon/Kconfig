@@ -1286,6 +1286,13 @@ config SENSORS_MC13783_ADC
         help
           Support for the A/D converter on MC13783 PMIC.
 
+config SENSORS_MC13892_ADC
+	tristate "Freescale MC13892 ADC"
+	depends on MFD_MC13892
+	help
+	  Support for the A/D converter on MC13892 PMIC.
+
+
 if ACPI
 
 comment "ACPI drivers"
