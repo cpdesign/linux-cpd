@@ -20,8 +20,6 @@
 
 struct mc13783 {
 	struct mc13xxx mc13xxx;
-
-	int adcflags;
 };
 
 struct mc13xxx *mc13783_to_mc13xxx(struct mc13783 *mc13783)
@@ -126,14 +124,24 @@ EXPORT_SYMBOL(mc13783_to_mc13xxx);
 #define MC13XXX_REVISION_FAB		(0x03 << 11)
 #define MC13XXX_REVISION_ICIDCODE	(0x3f << 13)
 
-#define MC13783_ADC1		44
-#define MC13783_ADC1_ADEN		(1 << 0)
-#define MC13783_ADC1_RAND		(1 << 1)
-#define MC13783_ADC1_ADSEL		(1 << 3)
-#define MC13783_ADC1_ASC		(1 << 20)
-#define MC13783_ADC1_ADTRIGIGN		(1 << 21)
+#define MC13XXX_ADC1		44
+#define MC13XXX_ADC1_ADEN		(1 << 0)
+#define MC13XXX_ADC1_RAND		(1 << 1)
+#define MC13XXX_ADC1_ADSEL		(1 << 3)
+#define MC13XXX_ADC1_ASC		(1 << 20)
+#define MC13XXX_ADC1_ADTRIGIGN		(1 << 21)
 
-#define MC13783_ADC2		45
+#define MC13XXX_ADC2		45
+#define MC13XXX_ADC4		47
+
+#define MC13783_ADC1		MC13XXX_ADC1
+#define MC13783_ADC1_ADEN		MC13XXX_ADC1_ADEN
+#define MC13783_ADC1_RAND		MC13XXX_ADC1_RAND
+#define MC13783_ADC1_ADSEL		MC13XXX_ADC1_ADSEL
+#define MC13783_ADC1_ASC		MC13XXX_ADC1_ASC
+#define MC13783_ADC1_ADTRIGIGN		MC13XXX_ADC1_ADTRIGIGN
+
+#define MC13783_ADC2		MC13XXX_ADC2
 
 #define MC13XXX_NUMREGS 0x3f
 
@@ -478,10 +486,11 @@ static int mc13xxx_identify(struct mc13xxx *mc13xxx)
 	return (mc13xxx->ictype == MC13XXX_ID_INVALID) ? -ENODEV : 0;
 }
 
-static const char *mc13xxx_get_chipname(struct mc13xxx *mc13xxx)
+const char *mc13xxx_get_chipname(struct mc13xxx *mc13xxx)
 {
 	return mc13xxx_chipname[mc13xxx->ictype];
 }
+EXPORT_SYMBOL(mc13xxx_get_chipname);
 
 #include <linux/mfd/mc13783.h>
 
@@ -502,7 +511,7 @@ struct mc13xxx_adcdone_data {
 	struct completion done;
 };
 
-static irqreturn_t mc13783_handler_adcdone(int irq, void *data)
+static irqreturn_t mc13xxx_handler_adcdone(int irq, void *data)
 {
 	struct mc13xxx_adcdone_data *adcdone_data = data;
 
@@ -513,11 +522,113 @@ static irqreturn_t mc13783_handler_adcdone(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-#define MC13783_ADC_WORKING (1 << 0)
+#define MC13XXX_ADC_WORKING	(1 << 0)
+#define MC13XXX_ADC_CAL		(1 << 1)
+
+int mc13xxx_adc_do_conversion(struct mc13xxx *mc13xxx, unsigned int mode,
+		unsigned int channel, unsigned int *sample)
+{
+	u32 adc0, adc1, old_adc0;
+	int i, ret;
+	struct mc13xxx_adcdone_data adcdone_data = {
+		.mc13xxx = mc13xxx,
+	};
+	init_completion(&adcdone_data.done);
+
+	dev_dbg(mc13xxx->dev, "%s\n", __func__);
+
+	mc13xxx_lock(mc13xxx);
+
+	if (mc13xxx->adcflags & MC13XXX_ADC_WORKING) {
+		ret = -EBUSY;
+		goto out;
+	}
+
+	mc13xxx->adcflags |= MC13XXX_ADC_WORKING;
+
+	mc13xxx_reg_read(mc13xxx, MC13XXX_ADC0, &old_adc0);
+
+	//TODO: init for MC13892
+	// adc0 |= MC13892_ADC1_ADCCAL
+
+	adc0 = MC13783_ADC0_ADINC1 | MC13783_ADC0_ADINC2;
+	adc1 = MC13783_ADC1_ADEN | MC13783_ADC1_ADTRIGIGN | MC13783_ADC1_ASC;
+
+	/*
+	 * For the mc13892 this means that the touchscreen inputs
+	 * are being sampled, but channels [8..11] will read 0
+	 */
+	if (channel > 7)
+		adc1 |= MC13783_ADC1_ADSEL;
+
+	switch (mode) {
+	case MC13783_ADC_MODE_TS:
+		adc0 |= MC13783_ADC0_ADREFEN | MC13783_ADC0_TSMOD0 |
+			MC13783_ADC0_TSMOD1;
+		adc1 |= 4 << MC13783_ADC1_CHAN1_SHIFT;
+		break;
+
+	case MC13783_ADC_MODE_SINGLE_CHAN:
+		adc0 |= old_adc0 & MC13783_ADC0_TSMOD_MASK;
+		adc1 |= (channel & 0x7) << MC13783_ADC1_CHAN0_SHIFT;
+		adc1 |= MC13783_ADC1_RAND;
+		break;
+
+	case MC13783_ADC_MODE_MULT_CHAN:
+		adc0 |= old_adc0 & MC13783_ADC0_TSMOD_MASK;
+		adc1 |= 4 << MC13783_ADC1_CHAN1_SHIFT;
+		break;
+
+	default:
+		mc13xxx_unlock(mc13xxx);
+		return -EINVAL;
+	}
+
+	dev_dbg(mc13xxx->dev, "%s: request irq\n", __func__);
+	mc13xxx_irq_request(mc13xxx, MC13XXX_IRQ_ADCDONE,
+			mc13xxx_handler_adcdone, __func__, &adcdone_data);
+	mc13xxx_irq_ack(mc13xxx, MC13783_IRQ_ADCDONE);
+
+	mc13xxx_reg_write(mc13xxx, MC13783_ADC0, adc0);
+	mc13xxx_reg_write(mc13xxx, MC13783_ADC1, adc1);
+
+	mc13xxx_unlock(mc13xxx);
+
+	ret = wait_for_completion_interruptible_timeout(&adcdone_data.done, HZ);
+
+	if (!ret)
+		ret = -ETIMEDOUT;
+
+	mc13xxx_lock(mc13xxx);
+
+	mc13xxx_irq_free(mc13xxx, MC13XXX_IRQ_ADCDONE, &adcdone_data);
+
+	if (ret > 0)
+		for (i = 0; i < 4; ++i) {
+			ret = mc13xxx_reg_read(mc13xxx,
+					MC13783_ADC2, &sample[i]);
+			if (ret)
+				break;
+		}
+
+	if (mode == MC13783_ADC_MODE_TS)
+		/* restore TSMOD */
+		mc13xxx_reg_write(mc13xxx, MC13783_ADC0, old_adc0);
+
+	mc13xxx->adcflags &= ~MC13XXX_ADC_WORKING;
+out:
+	mc13xxx_unlock(mc13xxx);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(mc13xxx_adc_do_conversion);
 
 int mc13783_adc_do_conversion(struct mc13783 *mc13783, unsigned int mode,
 		unsigned int channel, unsigned int *sample)
 {
+	return mc13xxx_adc_do_conversion(mc13783_to_mc13xxx(mc13783),
+			mode, channel, sample);
+#if 0
 	struct mc13xxx *mc13xxx = &mc13783->mc13xxx;
 	u32 adc0, adc1, old_adc0;
 	int i, ret;
@@ -604,6 +715,7 @@ out:
 	mc13xxx_unlock(mc13xxx);
 
 	return ret;
+#endif
 }
 EXPORT_SYMBOL_GPL(mc13783_adc_do_conversion);
 
@@ -611,11 +723,30 @@ static int mc13xxx_add_subdevice_pdata(struct mc13xxx *mc13xxx,
 		const char *format, void *pdata)
 {
 	char buf[30];
+	const char *defname = "mc13xxx";
 	const char *name = mc13xxx_get_chipname(mc13xxx);
+	int ret;
 
 	struct mfd_cell cell = {
 		.mfd_data = pdata,
 	};
+
+	/* try for a generic driver first */
+	if (snprintf(buf, sizeof(buf), format, defname) > sizeof(buf))
+		return -E2BIG;
+
+	cell.name = kmemdup(buf, strlen(buf) + 1, GFP_KERNEL);
+	if (!cell.name)
+		return -ENOMEM;
+
+	ret = mfd_add_devices(mc13xxx->dev, -1, &cell, 1, NULL, 0);
+	if (!ret) {
+		printk( KERN_INFO "matched %s\n", cell.name);
+		return ret;
+	}
+
+	printk( KERN_INFO "no match for %s\n", cell.name);
+	kfree(cell.name);
 
 	/* there is no asnprintf in the kernel :-( */
 	if (snprintf(buf, sizeof(buf), format, name) > sizeof(buf))
@@ -656,6 +787,10 @@ int mc13xxx_common_init(struct mc13xxx *mc13xxx,
 
 	ret = request_threaded_irq(irq, NULL, mc13xxx_irq_thread,
 			IRQF_ONESHOT | IRQF_TRIGGER_HIGH, "mc13xxx", mc13xxx);
+
+	if (0 == strcmp("mc13892", mc13xxx_get_chipname(mc13xxx))) {
+		mc13xxx_reg_rmw(mc13xxx, MC13XXX_ADC1, (1<<2) | (1<<20), (1<<2) | (1<<20));
+	}
 
 	if (ret) {
 err_mask:
