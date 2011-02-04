@@ -24,7 +24,7 @@
 
 #define MC13XXX_TS_NAME	"mc13xxx-ts"
 
-#define DEFAULT_SAMPLE_TOLERANCE 300
+#define DEFAULT_SAMPLE_TOLERANCE 100
 
 static unsigned int sample_tolerance = DEFAULT_SAMPLE_TOLERANCE;
 module_param(sample_tolerance, uint, S_IRUGO | S_IWUSR);
@@ -34,6 +34,10 @@ MODULE_PARM_DESC(sample_tolerance,
 		__stringify(DEFAULT_SAMPLE_TOLERANCE) ") or more, the reading "
 		"is supposed to be wrong and is discarded.  Set to 0 to "
 		"disable this check.");
+
+#define PENSTATE_UP		0
+#define PENSTATE_TOUCHED	1
+#define PENSTATE_DOWN		2
 
 struct mc13xxx_ts_priv {
 	struct input_dev *idev;
@@ -46,7 +50,7 @@ struct mc13xxx_ts_priv {
 
 	int lastx;
 	int lasty;
-	bool pendown;
+	int pendown;
 
 	void (*report_sample)(struct mc13xxx_ts_priv *);
 };
@@ -54,14 +58,15 @@ struct mc13xxx_ts_priv {
 static irqreturn_t mc13xxx_ts_handler(int irq, void *data)
 {
 	struct mc13xxx_ts_priv *priv = data;
-	printk(KERN_ERR "\n\nirq\n");
 
-	mc13xxx_irq_ack(priv->mc13xxx, irq);
 	/* turn off TS detection */
 	mc13xxx_reg_rmw(priv->mc13xxx, MC13XXX_ADC0,
 			MC13XXX_ADC0_TSMOD_MASK, 0);
 
-	priv->pendown = true;
+	mc13xxx_irq_ack(priv->mc13xxx, irq);
+	if (priv->pendown == PENSTATE_UP) {
+		priv->pendown = PENSTATE_TOUCHED;
+	}
 	/*
 	 * Kick off reading coordinates. Note that if work happens already
 	 * be queued for future execution (it rearms itself) it will not
@@ -87,6 +92,8 @@ static void mc13783_ts_report_sample(struct mc13xxx_ts_priv *priv)
 	struct input_dev *idev = priv->idev;
 	int x0, x1, x2, y0, y1, y2;
 	int cr0, cr1;
+
+	printk(KERN_ERR "mc13873 report sample\n");
 
 	/*
 	 * the values are 10-bit wide only, but the two least significant
@@ -165,45 +172,55 @@ static void mc13892_ts_report_sample(struct mc13xxx_ts_priv *priv)
 			 (abs(cr0 - cr1) < sample_tolerance))) {
 		/* report the average coordinate and average pressure */
 		if (pressure) {
-			x = (x1 + x0) / 2;
-			y = (y1 + y0) / 2;
+			if (priv->pendown == PENSTATE_DOWN) {
 
-			if (abs(x - priv->lastx) > 10 ) {
-				input_report_abs(idev, ABS_X, x);
-				priv->lastx = x;
+				x = (x1 + x0) / 2;
+				y = (y1 + y0) / 2;
+
+				if (abs(x - priv->lastx) > 10 ) {
+					input_report_abs(idev, ABS_X, x);
+					priv->lastx = x;
+				}
+				if (abs(y - priv->lasty) > 10 ) {
+					input_report_abs(idev, ABS_Y, y);
+					priv->lasty = y;
+				}
+
+				dev_dbg(&idev->dev, "report (%d, %d, %d)\n",
+						x, y, pressure);
+
+				input_report_key(idev, BTN_TOUCH, pressure ? 1 : 0);
+				input_report_abs(idev, ABS_PRESSURE, pressure);
+
+				input_sync(idev);
 			}
-			if (abs(y - priv->lasty) > 10 ) {
-				input_report_abs(idev, ABS_Y, y);
-				priv->lasty = y;
-			}
 
-			dev_dbg(&idev->dev, "report (%d, %d, %d)\n",
-					x, y, pressure);
-			queue_delayed_work(priv->workq, &priv->work, HZ / 50);
-
-			input_report_key(idev, BTN_TOUCH, pressure ? 1 : 0);
-			input_report_abs(idev, ABS_PRESSURE, pressure);
+			priv->pendown = PENSTATE_DOWN;
 		} else {
-			if (priv->pendown) {
+			if (priv->pendown == PENSTATE_DOWN) {
 				input_report_abs(idev, ABS_PRESSURE, pressure);
 				input_report_key(idev, BTN_TOUCH, pressure ? 1 : 0);
 
 				dev_dbg(&idev->dev, "report release\n");
 				priv->lastx = -1;
 				priv->lasty = -1;
+
+				input_sync(idev);
 			}
-			priv->pendown = false;
-
-			/* Start ts detection again */
-			mc13xxx_lock(priv->mc13xxx);
-			mc13xxx_reg_rmw(priv->mc13xxx, MC13XXX_ADC0,
-					MC13XXX_ADC0_TSMOD_MASK, MC13XXX_ADC0_TSMOD0);
-			mc13xxx_unlock(priv->mc13xxx);
+			priv->pendown = PENSTATE_UP;
 		}
-
-		input_sync(idev);
 	} else
 		dev_dbg(&idev->dev, "discard event\n");
+
+	if (priv->pendown) {
+		queue_delayed_work(priv->workq, &priv->work, HZ / 50);
+	} else {
+		/* Start ts detection again */
+		mc13xxx_lock(priv->mc13xxx);
+		mc13xxx_reg_rmw(priv->mc13xxx, MC13XXX_ADC0,
+				MC13XXX_ADC0_TSMOD_MASK, MC13XXX_ADC0_TSMOD0);
+		mc13xxx_unlock(priv->mc13xxx);
+	}
 }
 
 static void mc13xxx_ts_work(struct work_struct *work)
