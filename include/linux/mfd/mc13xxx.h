@@ -192,7 +192,7 @@ struct mc13xxx_platform_data {
 };
 
 #define MC13XXX_ADC0		43
-#define MC13XXX_ADC0_ADREFEN		(1 << 10) 
+#define MC13XXX_ADC0_ADREFEN		(1 << 10)
 /* mc13892 calls this TSREFEN, but same function */
 #define MC13XXX_ADCO_TSREFEN	MC13XXX_ADC0_ADREFEN
 #define MC13XXX_ADC0_TSMOD0		(1 << 12)
@@ -200,10 +200,6 @@ struct mc13xxx_platform_data {
 #define MC13XXX_ADC0_TSMOD2		(1 << 14)
 #define MC13XXX_ADC0_ADINC1		(1 << 16)
 #define MC13XXX_ADC0_ADINC2		(1 << 17)
-
-#define MC13XXX_ADC0_TSMOD0		(1 << 12)
-#define MC13XXX_ADC0_TSMOD1		(1 << 13)
-#define MC13XXX_ADC0_TSMOD2		(1 << 14)
 
 #define MC13XXX_ADC0_TSMOD_MASK		(MC13XXX_ADC0_TSMOD0 | \
 					MC13XXX_ADC0_TSMOD1 | \
