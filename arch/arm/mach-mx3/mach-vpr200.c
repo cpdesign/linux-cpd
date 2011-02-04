@@ -39,6 +39,7 @@
 #include <linux/i2c/at24.h>
 #include <linux/mfd/mc13xxx.h>
 #include <linux/gpio_keys.h>
+#include <linux/leds.h>
 
 #include "devices-imx35.h"
 #include "devices.h"
@@ -54,6 +55,10 @@
 #define GPIO_BUTTON6	IMX_GPIO_NR(1, 10)
 #define GPIO_BUTTON7	IMX_GPIO_NR(1, 11)
 #define GPIO_BUTTON8	IMX_GPIO_NR(1, 12)
+
+#define GPIO_LEDR	IMX_GPIO_NR(3, 14)
+#define GPIO_LEDG	IMX_GPIO_NR(3, 15)
+#define GPIO_LEDB	IMX_GPIO_NR(3, 30)
 
 static const struct fb_videomode fb_modedb[] = {
 	{
@@ -127,6 +132,40 @@ static const struct mxc_nand_platform_data
 	.width = 1,
 	.hw_ecc = 1,
 	.flash_bbt = 1,
+};
+
+static struct gpio_led vpr200_gpio_leds[] = {
+	[0] = {
+		.name			= "gpio-led:red:",
+		.gpio			= GPIO_LEDR,
+		.default_trigger	= "default-off",
+		.active_low		= 1,
+	},
+	[1] = {
+		.name			= "gpio-led:green:",
+		.gpio			= GPIO_LEDG,
+		.default_trigger	= "heartbeat",
+		.active_low		= 1,
+	},
+	[2] = {
+		.name			= "gpio-led:blue:",
+		.gpio			= GPIO_LEDB,
+		.default_trigger	= "default-off",
+		.active_low		= 1,
+	},
+};
+
+static struct gpio_led_platform_data vpr200_led_pdata = {
+	.leds           = vpr200_gpio_leds,
+	.num_leds       = ARRAY_SIZE(vpr200_gpio_leds),
+};
+
+static struct platform_device vpr200_led_device = {
+	 .name   = "leds-gpio",
+	 .id     = -1,
+	 .dev    = {
+		 .platform_data  =  &vpr200_led_pdata,
+	},
 };
 
 #define VPR_KEY_DEBOUNCE	500
@@ -248,6 +287,10 @@ static iomux_v3_cfg_t vpr200_pads[] = {
 	MX35_PAD_TX5_RX0__GPIO1_10,
 	MX35_PAD_TX4_RX1__GPIO1_11,
 	MX35_PAD_TX3_RX2__GPIO1_12,
+	/* leds */
+	MX35_PAD_USBOTG_PWR__GPIO3_14,
+	MX35_PAD_USBOTG_OC__GPIO3_15,
+	MX35_PAD_D3_HSYNC__GPIO3_30,
 };
 
 /* USB Device config */
@@ -272,6 +315,7 @@ static const struct mxc_usbh_platform_data usb_host_pdata __initconst = {
 static struct platform_device *devices[] __initdata = {
 	&vpr200_flash,
 	&vpr200_device_gpiokeys,
+	&vpr200_led_device,
 };
 
 /*
