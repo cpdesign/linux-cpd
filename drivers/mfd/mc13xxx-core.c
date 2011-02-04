@@ -9,6 +9,7 @@
  * the terms of the GNU General Public License version 2 as published by the
  * Free Software Foundation.
  */
+#define DEBUG
 
 #include <linux/slab.h>
 #include <linux/module.h>
@@ -123,6 +124,11 @@ EXPORT_SYMBOL(mc13783_to_mc13xxx);
 #define MC13XXX_REVISION_FIN		(0x03 <<  9)
 #define MC13XXX_REVISION_FAB		(0x03 << 11)
 #define MC13XXX_REVISION_ICIDCODE	(0x3f << 13)
+
+#define MC13XXX_ADC0_BATTICON		(1 << 0)
+#define MC13XXX_ADC0_CHRGICON		(1 << 1)
+#define MC13XXX_ADC0_LICELLCON		(1 << 2)
+#define MC13XXX_ADC0_CHRGRAWDIV		(1 << 15)
 
 #define MC13XXX_ADC1		44
 #define MC13XXX_ADC1_ADEN		(1 << 0)
@@ -506,6 +512,7 @@ int mc13xxx_get_flags(struct mc13xxx *mc13xxx)
 	return pdata->flags;
 }
 EXPORT_SYMBOL(mc13xxx_get_flags);
+
 struct mc13xxx_adcdone_data {
 	struct mc13xxx *mc13xxx;
 	struct completion done;
@@ -549,6 +556,14 @@ int mc13xxx_adc_do_conversion(struct mc13xxx *mc13xxx, unsigned int mode,
 	mc13xxx_reg_read(mc13xxx, MC13XXX_ADC0, &old_adc0);
 
 	adc0 = MC13XXX_ADC0_ADINC1 | MC13XXX_ADC0_ADINC2;
+
+	if (mc13xxx->adcflags & MC13XXX_ADC_MEASURE_BATT)
+		adc0 |= MC13XXX_ADC0_BATTICON;
+	if (mc13xxx->adcflags & MC13XXX_ADC_MEASURE_CHARGER)
+		adc0 |= MC13XXX_ADC0_CHRGICON;
+	if (mc13xxx->adcflags & MC13XXX_ADC_MEASURE_LICELL)
+		adc0 |= MC13XXX_ADC0_LICELLCON;
+
 	adc1 = MC13XXX_ADC1_ADEN | MC13XXX_ADC1_ADTRIGIGN | MC13XXX_ADC1_ASC;
 
 	/*
@@ -599,6 +614,13 @@ int mc13xxx_adc_do_conversion(struct mc13xxx *mc13xxx, unsigned int mode,
 	mc13xxx_lock(mc13xxx);
 
 	mc13xxx_irq_free(mc13xxx, MC13XXX_IRQ_ADCDONE, &adcdone_data);
+
+	if (mode == MC13XXX_ADC_MODE_SINGLE_CHAN) {
+		adc1 &= ~ ((0x7 << MC13XXX_ADC1_CHAN0_SHIFT) |
+				(0x7 << MC13XXX_ADC1_CHAN1_SHIFT));
+		adc1 |= (4 << MC13XXX_ADC1_CHAN1_SHIFT);
+		mc13xxx_reg_write(mc13xxx, MC13XXX_ADC1, adc1);
+	}
 
 	if (ret > 0)
 		for (i = 0; i < 4; ++i) {
@@ -730,6 +752,10 @@ err_revision:
 
 	if (pdata->flags & MC13XXX_USE_LED)
 		mc13xxx_add_subdevice_pdata(mc13xxx, "%s-led", pdata->leds);
+
+	if (pdata->flags & MC13XXX_USE_BATTERY) {
+		mc13xxx_add_subdevice(mc13xxx, "%s-battery");
+	}
 
 	return 0;
 }

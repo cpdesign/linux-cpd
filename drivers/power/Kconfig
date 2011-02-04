@@ -219,4 +219,10 @@ config CHARGER_GPIO
 	  This driver can be build as a module. If so, the module will be
 	  called gpio-charger.
 
+config BATTERY_MC13XXX
+	tristate "Battery and Charger driver for MC13892"
+	depends on MFD_MC13892
+	help
+	  Say Y here if you have an MC13892 and run it via battery power.
+
 endif # POWER_SUPPLY

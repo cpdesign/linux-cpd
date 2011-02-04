@@ -51,6 +51,8 @@ const char *mc13xxx_get_chipname(struct mc13xxx *mc13xxx);
 int mc13xxx_adc_do_conversion(struct mc13xxx *mc13xxx, unsigned int mode,
 		unsigned int channel, unsigned int *sample);
 
+#define MC13XXX_IRQSENS0	2
+#define MC13XXX_IRQSENS0_CHGDET		(1 << 6)
 
 #define MC13XXX_IRQ_ADCDONE	0
 #define MC13XXX_IRQ_ADCBISDONE	1
@@ -81,6 +83,10 @@ enum mc13xxx_id {
 	MC13XXX_ID_MC13892,
 	MC13XXX_ID_INVALID,
 };
+
+#define MC13XXX_ADC_MEASURE_BATT	(1 << 2)
+#define MC13XXX_ADC_MEASURE_CHARGER	(1 << 3)
+#define MC13XXX_ADC_MEASURE_LICELL	(1 << 4)
 
 struct mc13xxx {
 	union {
@@ -185,6 +191,7 @@ struct mc13xxx_platform_data {
 #define MC13XXX_USE_RTC		(1 << 3)
 #define MC13XXX_USE_REGULATOR	(1 << 4)
 #define MC13XXX_USE_LED		(1 << 5)
+#define MC13XXX_USE_BATTERY	(1 << 6)
 	unsigned int flags;
 
 	struct mc13xxx_regulator_platform_data regulators;
