@@ -21,6 +21,11 @@ int mc13xxx_reg_write(struct mc13xxx *mc13xxx, unsigned int offset, u32 val);
 int mc13xxx_reg_rmw(struct mc13xxx *mc13xxx, unsigned int offset,
 		u32 mask, u32 val);
 
+struct mc13xxx_platform_data;
+
+int mc13xxx_common_init(struct mc13xxx *mc13xxx,
+		struct mc13xxx_platform_data *pdata, int irq);
+
 int mc13xxx_get_flags(struct mc13xxx *mc13xxx);
 
 int mc13xxx_irq_request(struct mc13xxx *mc13xxx, int irq,
