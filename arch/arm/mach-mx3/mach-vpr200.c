@@ -195,7 +195,9 @@ static struct platform_device vpr200_device_gpiokeys = {
 };
 
 static struct mc13xxx_platform_data vpr200_pmic = {
-	.flags = MC13XXX_USE_ADC | MC13XXX_USE_TOUCHSCREEN,
+	.flags = MC13XXX_USE_ADC |
+		 MC13XXX_USE_BATTERY |
+		 MC13XXX_USE_TOUCHSCREEN,
 };
 
 static const struct imxi2c_platform_data vpr200_i2c0_data __initconst = {
