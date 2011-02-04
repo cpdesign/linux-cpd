@@ -56,6 +56,8 @@
 #define GPIO_BUTTON7	IMX_GPIO_NR(1, 11)
 #define GPIO_BUTTON8	IMX_GPIO_NR(1, 12)
 
+#define GPIO_BP_RESET	IMX_GPIO_NR(2, 18)
+
 #define GPIO_LEDR	IMX_GPIO_NR(3, 14)
 #define GPIO_LEDG	IMX_GPIO_NR(3, 15)
 #define GPIO_LEDB	IMX_GPIO_NR(3, 30)
@@ -216,6 +218,12 @@ static struct i2c_board_info vpr200_i2c_devices[] = {
 	}
 };
 
+static struct i2c_board_info vpr200_bus1_devices[] = {
+	{
+		I2C_BOARD_INFO("bmp085", 0x77),
+	}
+};
+
 static iomux_v3_cfg_t vpr200_pads[] = {
 	/* UART1 */
 	MX35_PAD_TXD1__UART1_TXD_MUX,
@@ -276,6 +284,9 @@ static iomux_v3_cfg_t vpr200_pads[] = {
 	MX35_PAD_SD1_DATA1__ESDHC1_DAT1,
 	MX35_PAD_SD1_DATA2__ESDHC1_DAT2,
 	MX35_PAD_SD1_DATA3__ESDHC1_DAT3,
+	/* I2C2 */
+	MX35_PAD_I2C2_CLK__I2C2_SCL,
+	MX35_PAD_I2C2_DAT__I2C2_SDA,
 	/* PMIC */
 	MX35_PAD_GPIO2_0__GPIO2_0,
 	/* GPIO keys */
@@ -287,6 +298,8 @@ static iomux_v3_cfg_t vpr200_pads[] = {
 	MX35_PAD_TX5_RX0__GPIO1_10,
 	MX35_PAD_TX4_RX1__GPIO1_11,
 	MX35_PAD_TX3_RX2__GPIO1_12,
+	/* bmp085  */
+	MX35_PAD_ATA_DATA5__GPIO2_18,
 	/* leds */
 	MX35_PAD_USBOTG_PWR__GPIO3_14,
 	MX35_PAD_USBOTG_OC__GPIO3_15,
@@ -340,6 +353,9 @@ static void __init vpr200_board_init(void)
 	else
 		gpio_direction_input(GPIO_PMIC_INT);
 
+	gpio_request(GPIO_BP_RESET, "BP_RESET");
+	gpio_direction_output(GPIO_BP_RESET, 1);
+
 	imx35_add_imx_uart0(NULL);
 	imx35_add_imx_uart2(NULL);
 
@@ -355,7 +371,11 @@ static void __init vpr200_board_init(void)
 	i2c_register_board_info(0, vpr200_i2c_devices,
 			ARRAY_SIZE(vpr200_i2c_devices));
 
+	i2c_register_board_info(1, vpr200_bus1_devices,
+			ARRAY_SIZE(vpr200_bus1_devices));
+
 	imx35_add_imx_i2c0(&vpr200_i2c0_data);
+	imx35_add_imx_i2c1(&vpr200_i2c0_data);
 }
 
 static void __init vpr200_timer_init(void)
