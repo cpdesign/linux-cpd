@@ -199,7 +199,7 @@ static struct mc13xxx_platform_data vpr200_pmic = {
 };
 
 static const struct imxi2c_platform_data vpr200_i2c0_data __initconst = {
-	.bitrate = 50000,
+	.bitrate = 100000,
 };
 
 static struct at24_platform_data vpr200_eeprom = {
