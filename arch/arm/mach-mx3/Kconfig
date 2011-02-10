@@ -24,6 +24,7 @@ config SOC_IMX35
 	select HAVE_EPIT
 	select ARCH_MX35
 	select MXC_AVIC
+	select ARCH_HAS_CPUFREQ
 
 comment "MX3 platforms:"
 
@@ -250,6 +251,7 @@ config MACH_VPR200
 	select IMX_HAVE_PLATFORM_MXC_EHCI
 	select IMX_HAVE_PLATFORM_MXC_NAND
 	select IMX_HAVE_PLATFORM_SDHCI_ESDHC_IMX
+	select IMX_HAVE_PLATFORM_MXC_PWM
 	help
 	  Include support for VPR200 platform. This includes specific
 	  configurations for the board and its peripherals.

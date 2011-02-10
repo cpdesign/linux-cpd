@@ -187,7 +187,7 @@ static struct cpufreq_driver mxc_driver = {
 	.name = "imx",
 };
 
-static int __devinit mxc_cpufreq_driver_init(void)
+static int __init mxc_cpufreq_driver_init(void)
 {
 	return cpufreq_register_driver(&mxc_driver);
 }

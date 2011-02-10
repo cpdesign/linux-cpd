@@ -43,6 +43,7 @@
 
 #include "devices-imx35.h"
 #include "devices.h"
+#include "cpu_op-mx35.h"
 
 #define GPIO_LCDPWR	IMX_GPIO_NR(1, 2)
 #define GPIO_PMIC_INT	IMX_GPIO_NR(2, 0)
@@ -339,6 +340,10 @@ static struct platform_device *devices[] __initdata = {
 static void __init vpr200_board_init(void)
 {
 	mxc_iomux_v3_setup_multiple_pads(vpr200_pads, ARRAY_SIZE(vpr200_pads));
+
+#if defined(CONFIG_CPU_FREQ_IMX)
+	get_cpu_op = mx35_get_cpu_op;
+#endif
 
 	imx35_add_fec(NULL);
 	imx35_add_imx2_wdt(NULL);
