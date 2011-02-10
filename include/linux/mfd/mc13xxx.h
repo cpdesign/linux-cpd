@@ -52,12 +52,13 @@ int mc13xxx_adc_do_conversion(struct mc13xxx *mc13xxx, unsigned int mode,
 		unsigned int channel, unsigned int *sample);
 
 #define MC13XXX_IRQSENS0	2
-#define MC13XXX_IRQSENS0_CHGDET		(1 << 6)
+//#define MC13XXX_IRQSENS0_CHGDET		(1 << 6)
 
 #define MC13XXX_IRQ_ADCDONE	0
 #define MC13XXX_IRQ_ADCBISDONE	1
 #define MC13XXX_IRQ_TS		2
 #define MC13XXX_IRQ_CHGDET	6
+#define MC13XXX_IRQ_CHGFAULT	7
 #define MC13XXX_IRQ_CHGREV	8
 #define MC13XXX_IRQ_CHGSHORT	9
 #define MC13XXX_IRQ_CCCV	10
