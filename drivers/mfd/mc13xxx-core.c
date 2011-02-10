@@ -9,7 +9,7 @@
  * the terms of the GNU General Public License version 2 as published by the
  * Free Software Foundation.
  */
-#define DEBUG
+//#define DEBUG
 
 #include <linux/slab.h>
 #include <linux/module.h>
@@ -125,9 +125,9 @@ EXPORT_SYMBOL(mc13783_to_mc13xxx);
 #define MC13XXX_REVISION_FAB		(0x03 << 11)
 #define MC13XXX_REVISION_ICIDCODE	(0x3f << 13)
 
-#define MC13XXX_ADC0_BATTICON		(1 << 0)
+#define MC13XXX_ADC0_BATTICON		(1 << 2)
 #define MC13XXX_ADC0_CHRGICON		(1 << 1)
-#define MC13XXX_ADC0_LICELLCON		(1 << 2)
+#define MC13XXX_ADC0_LICELLCON		(1 << 0)
 #define MC13XXX_ADC0_CHRGRAWDIV		(1 << 15)
 
 #define MC13XXX_ADC1		44
