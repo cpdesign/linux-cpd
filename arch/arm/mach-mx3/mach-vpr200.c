@@ -67,6 +67,9 @@
 #define GPIO_LEDG	IMX_GPIO_NR(3, 15)
 #define GPIO_LEDB	IMX_GPIO_NR(3, 30)
 
+#define GPIO_SD_CD	IMX_GPIO_NR(3, 1)
+#define GPIO_SD_WP	IMX_GPIO_NR(3, 2)
+
 static const struct fb_videomode fb_modedb[] = {
 	{
 		/* 800x480 @ 60 Hz */
@@ -139,6 +142,11 @@ static const struct mxc_nand_platform_data
 	.width = 1,
 	.hw_ecc = 1,
 	.flash_bbt = 1,
+};
+
+static struct esdhc_platform_data sd1_pdata = {
+	.wp_gpio = GPIO_SD_WP,
+	.cd_gpio = GPIO_SD_CD,
 };
 
 static struct gpio_led vpr200_gpio_leds[] = {
@@ -290,6 +298,8 @@ static iomux_v3_cfg_t vpr200_pads[] = {
 	MX35_PAD_SD1_DATA1__ESDHC1_DAT1,
 	MX35_PAD_SD1_DATA2__ESDHC1_DAT2,
 	MX35_PAD_SD1_DATA3__ESDHC1_DAT3,
+	MX35_PAD_ATA_DA1__GPIO3_1,
+	MX35_PAD_ATA_DA2__GPIO3_2,
 	/* I2C1 */
 	MX35_PAD_I2C1_CLK__I2C1_SCL,
 	MX35_PAD_I2C1_DAT__I2C1_SDA,
@@ -424,7 +434,8 @@ static void __init vpr200_board_init(void)
 	imx35_add_mxc_ehci_hs(&usb_host_pdata);
 
 	imx35_add_mxc_nand(&vpr200_nand_board_info);
-	imx35_add_sdhci_esdhc_imx(0, NULL);
+	imx35_add_sdhci_esdhc_imx(0, &sd1_pdata);
+
 #if defined(CONFIG_SND_SOC_VPR200_PCM1774)
 	/* SSI unit master I2S codec connected to SSI_AUD4 */
 	mxc_audmux_v2_configure_port(0,
