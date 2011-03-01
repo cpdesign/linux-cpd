@@ -342,6 +342,7 @@ static void clk_cgr_disable(struct clk *clk)
 	__raw_writel(reg, clk->enable_reg);
 }
 
+
 #define DEFINE_CLOCK(name, i, er, es, gr, sr)		\
 	static struct clk name = {			\
 		.id		= i,			\
@@ -438,6 +439,171 @@ static struct clk nfc_clk = {
 	.disable	= clk_dummy_disable
 };
 
+#define _FIXED_CLOCK( name, rate ) \
+	static unsigned long get_rate_##name(struct clk *clk)		\
+	{								\
+		return rate;						\
+	}								\
+									\
+	static struct clk name##_clk = {				\
+		.get_rate	= get_rate_##name,			\
+		.enable		= clk_dummy_enable,			\
+		.disable	= clk_dummy_disable,			\
+	};
+
+_FIXED_CLOCK(ckih, 24000000);
+_FIXED_CLOCK(ckil, 32000);
+
+
+static unsigned long clk_clko_round_rate(struct clk *clk, unsigned long rate)
+{
+	unsigned long parent_rate;
+	u32 div = 0, div1 = 1;
+
+	parent_rate = clk->parent->get_rate(clk->parent);
+	div = parent_rate / rate;
+	if (parent_rate % rate)
+		div++;
+
+	if (div > 64) {
+		div = (div + 1) >> 1;
+		div1++;
+	}
+
+	if (div > 128)
+		div = 64;
+	return parent_rate / (div * div1);
+}
+
+#define CCM_CLKO_DIV1_BIT	6
+#define CCM_CLKO_DIV_SHIFT	10
+static int clk_clko_set_rate(struct clk *clk, unsigned long rate)
+{
+	u32 reg;
+	u32 div, div1 = 0;
+	unsigned long parent_rate;
+
+	parent_rate = clk->parent->get_rate(clk->parent);
+	div = parent_rate / rate;
+	if ((parent_rate / div) != rate)
+		return -EINVAL;
+
+	if (div > 64) {
+		div1 = (1 << CCM_CLKO_DIV1_BIT);
+		div >>= 1;
+	} else {
+		div1 = 0;
+	}
+
+	reg = __raw_readl(CCM_BASE + CCM_COSR);
+	reg &= ~((0x3f << CCM_CLKO_DIV_SHIFT) | (1 << CCM_CLKO_DIV1_BIT) );
+	reg |= ((div - 1) << CCM_CLKO_DIV_SHIFT) | div1;
+
+	__raw_writel(reg, CCM_BASE + CCM_COSR);
+
+	return 0;
+}
+
+static unsigned long clk_clko_get_rate(struct clk *clk)
+{
+	u32 reg;
+	u32 div, div1;
+	unsigned long parent_rate = clk->parent->get_rate(clk->parent);
+
+	reg = __raw_readl(CCM_BASE + CCM_COSR);
+	div1 = reg & (1 << CCM_CLKO_DIV1_BIT);
+	div = (reg  >> CCM_CLKO_DIV_SHIFT) & 0x3f;
+
+	return parent_rate / ((div + 1) * (div1 + 1));
+}
+
+#if 0
+static void _clk_cko1_recalc(struct clk *clk)
+{
+	u32 prdf = 1;
+	u32 podf, div1;
+	u32 reg = __raw_readl(MXC_CCM_COSR);
+
+	div1 = 1 << ((reg & MXC_CCM_COSR_CLKOUTDIV_1) != 0);
+	if (cpu_is_mx35_rev(CHIP_REV_2_0) < 1) {
+		prdf = (reg & MXC_CCM_COSR_CLKOUT_PREDIV_MASK) >>
+		    MXC_CCM_COSR_CLKOUT_PREDIV_OFFSET;
+		podf = (reg & MXC_CCM_COSR_CLKOUT_PRODIV_MASK) >>
+		    MXC_CCM_COSR_CLKOUT_PRODIV_OFFSET;
+	} else
+		podf = (reg & MXC_CCM_COSR_CLKOUT_PRODIV_MASK_V2) >>
+		    MXC_CCM_COSR_CLKOUT_PRODIV_OFFSET;
+
+	clk->rate = clk->parent->rate / (div1 * (podf + 1) * (prdf + 1));
+}
+#endif
+
+struct clko_src {
+	struct clk *parent;
+	int clkosel;
+	int ckilh;
+};
+
+static const struct clko_src clko_sources [] = {
+	{&ckil_clk,	0x00, 0},
+//	{&ckilh_clk,	0x00, 1},
+	{&ckih_clk,	0x01, 0},
+	{&nfc_clk,	0x17, 0},
+};
+
+static int clk_clko_set_parent(struct clk *clk, struct clk *parent)
+{
+#define COSR_CLKOSEL_OFFSET	0
+#define COSR_CLKO_CKILH		7
+	u32 reg;
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(clko_sources); ++i) {
+		if (clko_sources[i].parent == parent)
+			break;
+	}
+
+	if (i >= ARRAY_SIZE(clko_sources))
+		return -EINVAL;
+
+	reg = __raw_readl(CCM_BASE + CCM_COSR) & ~0x1f;
+	reg |= clko_sources[i].clkosel;
+	reg |= clko_sources[i].ckilh;
+	__raw_writel(reg, CCM_BASE + CCM_COSR);
+
+	return 0;
+}
+
+static int clk_clko_enable(struct clk *clk)
+{
+	u32 reg;
+
+	reg = __raw_readl(CCM_BASE + CCM_COSR);
+	reg |= (1 << 5);
+	__raw_writel(reg, CCM_BASE + CCM_COSR);
+
+	return 0;
+}
+
+static void clk_clko_disable(struct clk *clk)
+{
+	u32 reg;
+
+	reg = __raw_readl(CCM_BASE + CCM_COSR);
+	reg &= ~(1 << 5);
+	__raw_writel(reg, CCM_BASE + CCM_COSR);
+}
+
+static struct clk clko_clk = {
+	.id = 0,
+	.set_rate = clk_clko_set_rate,
+	.get_rate = clk_clko_get_rate,
+	.round_rate = clk_clko_round_rate,
+	.set_parent = clk_clko_set_parent,
+	.enable = clk_clko_enable,
+	.disable = clk_clko_disable,
+};
+
 #define _REGISTER_CLOCK(d, n, c)	\
 	{				\
 		.dev_id = d,		\
@@ -501,6 +667,9 @@ static struct clk_lookup lookups[] = {
 	_REGISTER_CLOCK(NULL, "iim", iim_clk)
 	_REGISTER_CLOCK(NULL, "gpu2d", gpu2d_clk)
 	_REGISTER_CLOCK("mxc_nand.0", NULL, nfc_clk)
+	_REGISTER_CLOCK(NULL, "clko", clko_clk)
+	_REGISTER_CLOCK(NULL, "ckih", ckih_clk)
+	_REGISTER_CLOCK(NULL, "ckil", ckil_clk)
 };
 
 int __init mx35_clocks_init()
