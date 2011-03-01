@@ -190,6 +190,9 @@ config SND_SOC_MAX98088
 config SND_SOC_MAX9850
 	tristate
 
+config SND_SOC_PCM1774
+	tristate
+
 config SND_SOC_PCM3008
        tristate
 
