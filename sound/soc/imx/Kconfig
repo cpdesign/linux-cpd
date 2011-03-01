@@ -63,4 +63,13 @@ config SND_SOC_EUKREA_TLV320
 	  Enable I2S based access to the TLV320AIC23B codec attached
 	  to the SSI interface
 
+config SND_SOC_VPR200_PCM1774
+	tristate "PCM1774 on VPR200"
+	depends on MACH_VPR200
+	select SND_SOC_PCM1774
+	select SND_MXC_SOC_SSI
+	select SND_MXC_SOC_FIQ
+	help
+	  Enable audio support for the VPR200 with PCM1774
+
 endif	# SND_IMX_SOC
