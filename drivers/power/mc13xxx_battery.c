@@ -711,7 +711,7 @@ static int __devinit mc13xxx_battery_probe(struct platform_device *pdev)
 	ret = power_supply_register(&pdev->dev, &batt->charger);
 	if (ret)
 		goto charger_err;
-
+/*
 	batt->coincell.name = "mc13xxx_coincell";
 	batt->coincell.type = POWER_SUPPLY_TYPE_BATTERY;
 	batt->coincell.properties = mc13xxx_coincell_props;
@@ -721,16 +721,16 @@ static int __devinit mc13xxx_battery_probe(struct platform_device *pdev)
 	ret = power_supply_register(&pdev->dev, &batt->coincell);
 	if (ret)
 		goto coincell_err;
-
+*/
 	mc13xxx_lock(batt->mc13xxx);
 	{
 	batt->mc13xxx->adcflags |= MC13XXX_ADC_MEASURE_BATT;
 	batt->mc13xxx->adcflags |= MC13XXX_ADC_MEASURE_CHARGER;
-	batt->mc13xxx->adcflags |= MC13XXX_ADC_MEASURE_LICELL;
+//	batt->mc13xxx->adcflags |= MC13XXX_ADC_MEASURE_LICELL;
 
 	mc13xxx_do_cc_calibrate(batt);
 	mc13xxx_do_battery_init(batt);
-	mc13xxx_do_coincell_init(batt);
+//	mc13xxx_do_coincell_init(batt);
 
 	mc13xxx_irq_ack(batt->mc13xxx, MC13XXX_IRQ_CHGDET);
 	mc13xxx_irq_request(batt->mc13xxx, MC13XXX_IRQ_CHGDET,
