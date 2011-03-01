@@ -34,12 +34,14 @@
 #include <mach/irqs.h>
 #include <mach/ipu.h>
 #include <mach/mx3fb.h>
+#include <mach/audmux.h>
 
 #include <linux/i2c.h>
 #include <linux/i2c/at24.h>
 #include <linux/mfd/mc13xxx.h>
 #include <linux/gpio_keys.h>
 #include <linux/leds.h>
+#include <linux/clk.h>
 
 #include "devices-imx35.h"
 #include "devices.h"
@@ -56,6 +58,8 @@
 #define GPIO_BUTTON6	IMX_GPIO_NR(1, 10)
 #define GPIO_BUTTON7	IMX_GPIO_NR(1, 11)
 #define GPIO_BUTTON8	IMX_GPIO_NR(1, 12)
+
+#define GPIO_SPEAKER	IMX_GPIO_NR(1, 14)
 
 #define GPIO_BP_RESET	IMX_GPIO_NR(2, 18)
 
@@ -224,6 +228,8 @@ static struct i2c_board_info vpr200_i2c_devices[] = {
 static struct i2c_board_info vpr200_bus1_devices[] = {
 	{
 		I2C_BOARD_INFO("bmp085", 0x77),
+	}, {
+		I2C_BOARD_INFO("pcm1774", 0x47),
 	}
 };
 
@@ -301,6 +307,13 @@ static iomux_v3_cfg_t vpr200_pads[] = {
 	MX35_PAD_TX5_RX0__GPIO1_10,
 	MX35_PAD_TX4_RX1__GPIO1_11,
 	MX35_PAD_TX3_RX2__GPIO1_12,
+	/* I2S */
+	MX35_PAD_STXFS4__AUDMUX_AUD4_TXFS,
+	MX35_PAD_STXD4__AUDMUX_AUD4_TXD,
+	MX35_PAD_SRXD4__AUDMUX_AUD4_RXD,
+	MX35_PAD_SCK4__AUDMUX_AUD4_TXC,
+	/* speaker */
+	MX35_PAD_TX1__GPIO1_14,
 	/* bmp085  */
 	MX35_PAD_ATA_DATA5__GPIO2_18,
 	/* leds */
@@ -334,6 +347,39 @@ static struct platform_device *devices[] __initdata = {
 	&vpr200_led_device,
 };
 
+static const
+struct imx_ssi_platform_data vpr200_ssi_pdata __initconst = {
+	.flags = IMX_SSI_SYN | IMX_SSI_NET | IMX_SSI_USE_I2S_SLAVE,
+};
+
+static void mxc_init_pcm1774(void)
+{
+	struct clk *clko, *parent;
+	unsigned long rate;
+
+	clko = clk_get(NULL, "clko");
+	if (IS_ERR(clko)) {
+		pr_err("%s: Couldn't get clko\n", __func__);
+		return;
+	}
+	parent = clk_get(NULL, "ckih");
+	if (IS_ERR(parent)) {
+		pr_err("%s: Couldn't get ckih\n", __func__);
+		return;
+	}
+	clk_set_parent(clko, parent);
+	rate = clk_round_rate(clko, 12000000);
+	if (rate < 8000000 || rate > 27000000) {
+		printk(KERN_ERR "Error: pcm1774 sclk freq %d out of range!\n",
+		       (unsigned int)rate);
+		clk_put(parent);
+		clk_put(clko);
+		return;
+	}
+	clk_set_rate(clko, rate);
+	clk_enable(clko);
+}
+
 /*
  * Board specific initialization.
  */
@@ -363,6 +409,11 @@ static void __init vpr200_board_init(void)
 	gpio_request(GPIO_BP_RESET, "BP_RESET");
 	gpio_direction_output(GPIO_BP_RESET, 1);
 
+	if (0 != gpio_request(GPIO_SPEAKER, "SPEAKER"))
+		printk(KERN_WARNING "vpr200: Couldn't get SPEAKER gpio\n");
+	else
+		gpio_direction_output(GPIO_SPEAKER, 0);
+
 	imx35_add_imx_uart0(NULL);
 	imx35_add_imx_uart2(NULL);
 
@@ -374,6 +425,22 @@ static void __init vpr200_board_init(void)
 
 	imx35_add_mxc_nand(&vpr200_nand_board_info);
 	imx35_add_sdhci_esdhc_imx(0, NULL);
+#if defined(CONFIG_SND_SOC_VPR200_PCM1774)
+	/* SSI unit master I2S codec connected to SSI_AUD4 */
+	mxc_audmux_v2_configure_port(0,
+			MXC_AUDMUX_V2_PTCR_SYN |
+			MXC_AUDMUX_V2_PTCR_TFSDIR |
+			MXC_AUDMUX_V2_PTCR_TFSEL(3) |
+			MXC_AUDMUX_V2_PTCR_TCLKDIR |
+			MXC_AUDMUX_V2_PTCR_TCSEL(3),
+			MXC_AUDMUX_V2_PDCR_RXDSEL(3)
+	);
+	mxc_audmux_v2_configure_port(3,
+			MXC_AUDMUX_V2_PTCR_SYN,
+			MXC_AUDMUX_V2_PDCR_RXDSEL(0)
+	);
+#endif
+	imx35_add_imx_ssi(0, &vpr200_ssi_pdata);
 
 	i2c_register_board_info(0, vpr200_i2c_devices,
 			ARRAY_SIZE(vpr200_i2c_devices));
@@ -383,6 +450,8 @@ static void __init vpr200_board_init(void)
 
 	imx35_add_imx_i2c0(&vpr200_i2c0_data);
 	imx35_add_imx_i2c1(&vpr200_i2c0_data);
+
+	mxc_init_pcm1774();
 }
 
 static void __init vpr200_timer_init(void)
