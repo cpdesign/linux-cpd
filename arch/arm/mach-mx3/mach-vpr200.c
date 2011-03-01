@@ -238,6 +238,8 @@ static struct i2c_board_info vpr200_bus1_devices[] = {
 		I2C_BOARD_INFO("bmp085", 0x77),
 	}, {
 		I2C_BOARD_INFO("pcm1774", 0x47),
+	}, {
+		I2C_BOARD_INFO("isl22316", 0x2b), // 010 1011
 	}
 };
 
