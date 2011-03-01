@@ -315,6 +315,12 @@ config BACKLIGHT_PCF50633
 	  If you have a backlight driven by a NXP PCF50633 MFD, say Y here to
 	  enable its driver.
 
+config BACKLIGHT_ISL22316
+	tristate "Backlight driver for ISL22316"
+	depends on I2C
+	help
+	  Say Y to enable backlight support based on isl22316 digital pot.
+
 endif # BACKLIGHT_CLASS_DEVICE
 
 endif # BACKLIGHT_LCD_SUPPORT
