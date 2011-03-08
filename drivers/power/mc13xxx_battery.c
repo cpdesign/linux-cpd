@@ -123,10 +123,10 @@ static irqreturn_t mc13xxx_chgfault_handler(int irq, void *data)
 
 	mc13xxx_irq_ack(batt->mc13xxx, irq);
 
-	mc13xxx_reg_read(batt->mc13xxx, MC13XXX_IRQSENS0, &val);
+//	mc13xxx_reg_read(batt->mc13xxx, MC13XXX_IRQSENS0, &val);
 
-	pr_info("%s %d -- 0x%06x, 0x%01x\n",
-			__func__, irq, val, (val >> 8) & 0x3);
+//	pr_info("%s %d -- 0x%06x, 0x%01x\n",
+//			__func__, irq, val, (val >> 8) & 0x3);
 
 	return IRQ_HANDLED;
 }
@@ -138,9 +138,9 @@ static irqreturn_t mc13xxx_chgcurr_handler(int irq, void *data)
 
 	mc13xxx_irq_ack(batt->mc13xxx, irq);
 
-	mc13xxx_reg_read(batt->mc13xxx, MC13XXX_IRQSENS0, &val);
+//	mc13xxx_reg_read(batt->mc13xxx, MC13XXX_IRQSENS0, &val);
 
-	pr_info("%s %d -- 0x%06x\n", __func__, irq, val);
+//	pr_info("%s %d -- 0x%06x\n", __func__, irq, val);
 
 	return IRQ_HANDLED;
 }
@@ -155,10 +155,10 @@ static irqreturn_t mc13xxx_cccv_handler(int irq, void *data)
 
 	mc13xxx_irq_ack(batt->mc13xxx, irq);
 
-	mc13xxx_reg_read(batt->mc13xxx, MC13XXX_IRQSENS0, &val);
+//	mc13xxx_reg_read(batt->mc13xxx, MC13XXX_IRQSENS0, &val);
 
-	pr_info("%s %d -- 0x%06x -- 0x%1x\n",
-			__func__, irq, val, !!(val& MC13XXX_IRQSENS0_CCCV));
+//	pr_info("%s %d -- 0x%06x -- 0x%1x\n",
+//			__func__, irq, val, !!(val& MC13XXX_IRQSENS0_CCCV));
 
 	return IRQ_HANDLED;
 }
@@ -223,7 +223,7 @@ static int mc13xxx_do_restart_charging(struct mc13xxx_battery *batt)
 	val |= MC13XXX_CHARGER0_CHRGRESTART;
 	val |= MC13XXX_CHARGER0_CHGAUTOVIB;
 	val |= MC13XXX_CHARGER0_CHGTMRRST;
-	val |= MC13XXX_CHARGER0_CYCLB;
+	//val |= MC13XXX_CHARGER0_CYCLB;
 	val |= MC13XXX_CHARGER0_THCHKB;
 
 	ret = mc13xxx_reg_write(batt->mc13xxx, MC13XXX_CHARGER0, val);
@@ -386,6 +386,7 @@ static int mc13xxx_battery_update(struct mc13xxx_battery *batt)
 {
 	int ret;
 	u32 sens0, sens1;
+	u32 chrg_fault;
 	bool now_charger_online;
 	bool now_battery_online;
 
@@ -394,6 +395,12 @@ static int mc13xxx_battery_update(struct mc13xxx_battery *batt)
 
 	if (ret)
 		goto out;
+
+	chrg_fault = (sens0 >> 8) & 0x3;
+	if (chrg_fault == 0x02) {
+		dev_info(batt->charger.dev, "Charge time out.\n");
+		mc13xxx_do_restart_charging(batt);
+	}
 
 	now_charger_online = !!(sens0 & MC13XXX_IRQSENS0_CHGDET);
 	if (now_charger_online != batt->charger_online) {
