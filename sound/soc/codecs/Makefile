@@ -109,11 +109,8 @@ obj-$(CONFIG_SND_SOC_DMIC)	+= snd-soc-dmic.o
 obj-$(CONFIG_SND_SOC_L3)	+= snd-soc-l3.o
 obj-$(CONFIG_SND_SOC_JZ4740_CODEC)	+= snd-soc-jz4740-codec.o
 obj-$(CONFIG_SND_SOC_MAX98088)	+= snd-soc-max98088.o
-<<<<<<< HEAD
 obj-$(CONFIG_SND_SOC_MAX9850)	+= snd-soc-max9850.o
-=======
 obj-$(CONFIG_SND_SOC_PCM1774) 	+= snd-soc-pcm1774.o
->>>>>>> 6289c9f... ASoC: audio codec pcm1774
 obj-$(CONFIG_SND_SOC_PCM3008)	+= snd-soc-pcm3008.o
 obj-$(CONFIG_SND_SOC_SGTL5000)  += snd-soc-sgtl5000.o
 obj-$(CONFIG_SND_SOC_SN95031)	+=snd-soc-sn95031.o
