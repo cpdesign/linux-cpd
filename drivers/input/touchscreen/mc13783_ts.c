@@ -210,15 +210,6 @@ static void mc13892_ts_report_sample(struct mc13xxx_ts_priv *priv)
 	} else
 		dev_dbg(&idev->dev, "discard event\n");
 
-	if (priv->pendown) {
-		queue_delayed_work(priv->workq, &priv->work, HZ / 50);
-	} else {
-		/* Start ts detection again */
-		mc13xxx_lock(priv->mc13xxx);
-		mc13xxx_reg_rmw(priv->mc13xxx, MC13XXX_ADC0,
-				MC13XXX_ADC0_TSMOD_MASK, MC13XXX_ADC0_TSMOD0);
-		mc13xxx_unlock(priv->mc13xxx);
-	}
 }
 
 static void mc13xxx_ts_work(struct work_struct *work)
@@ -233,6 +224,16 @@ static void mc13xxx_ts_work(struct work_struct *work)
 		priv->report_sample(priv);
 	else
 		dev_err(&priv->idev->dev, "couldn't convert\n");
+
+	if (priv->pendown) {
+		queue_delayed_work(priv->workq, &priv->work, HZ / 50);
+	} else {
+		/* Start ts detection again */
+		mc13xxx_lock(priv->mc13xxx);
+		mc13xxx_reg_rmw(priv->mc13xxx, MC13XXX_ADC0,
+				MC13XXX_ADC0_TSMOD_MASK, MC13XXX_ADC0_TSMOD0);
+		mc13xxx_unlock(priv->mc13xxx);
+	}
 }
 
 static int mc13xxx_ts_open(struct input_dev *dev)
