@@ -254,6 +254,7 @@ static int mc13xxx_ts_open(struct input_dev *dev)
 			MC13XXX_ADC0_TSMOD_MASK, MC13XXX_ADC0_TSMOD0);
 	if (ret)
 		mc13xxx_irq_free(priv->mc13xxx, MC13XXX_IRQ_TS, priv);
+
 out:
 	mc13xxx_unlock(priv->mc13xxx);
 	return ret;
