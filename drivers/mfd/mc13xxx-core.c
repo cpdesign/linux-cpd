@@ -581,12 +581,14 @@ int mc13xxx_adc_do_conversion(struct mc13xxx *mc13xxx, unsigned int mode,
 
 	adc0 = MC13XXX_ADC0_ADINC1 | MC13XXX_ADC0_ADINC2;
 
-	if (mc13xxx->adcflags & MC13XXX_ADC_MEASURE_BATT)
-		adc0 |= MC13XXX_ADC0_BATTICON;
-	if (mc13xxx->adcflags & MC13XXX_ADC_MEASURE_CHARGER)
-		adc0 |= MC13XXX_ADC0_CHRGICON;
-	if (mc13xxx->adcflags & MC13XXX_ADC_MEASURE_LICELL)
-		adc0 |= MC13XXX_ADC0_LICELLCON;
+	if (mode != MC13XXX_ADC_MODE_TS) {
+		if (mc13xxx->adcflags & MC13XXX_ADC_MEASURE_BATT)
+			adc0 |= MC13XXX_ADC0_BATTICON;
+		if (mc13xxx->adcflags & MC13XXX_ADC_MEASURE_CHARGER)
+			adc0 |= MC13XXX_ADC0_CHRGICON;
+		if (mc13xxx->adcflags & MC13XXX_ADC_MEASURE_LICELL)
+			adc0 |= MC13XXX_ADC0_LICELLCON;
+	}
 
 	adc1 = MC13XXX_ADC1_ADEN | MC13XXX_ADC1_ADTRIGIGN | MC13XXX_ADC1_ASC;
 
