@@ -93,8 +93,6 @@ static void mc13783_ts_report_sample(struct mc13xxx_ts_priv *priv)
 	int x0, x1, x2, y0, y1, y2;
 	int cr0, cr1;
 
-	printk(KERN_ERR "mc13873 report sample\n");
-
 	/*
 	 * the values are 10-bit wide only, but the two least significant
 	 * bits are for future 12 bit use and reading yields 0
