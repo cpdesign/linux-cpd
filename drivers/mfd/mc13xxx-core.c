@@ -561,6 +561,7 @@ int mc13xxx_adc_do_conversion(struct mc13xxx *mc13xxx, unsigned int mode,
 {
 	u32 adc0, adc1, old_adc0;
 	int i, ret = 0;
+	long timeout;
 	struct mc13xxx_adcdone_data adcdone_data = {
 		.mc13xxx = mc13xxx,
 	};
@@ -630,15 +631,18 @@ int mc13xxx_adc_do_conversion(struct mc13xxx *mc13xxx, unsigned int mode,
 
 	mc13xxx_unlock(mc13xxx);
 
-	ret = wait_for_completion_interruptible_timeout(&adcdone_data.done, HZ);
+	timeout = wait_for_completion_interruptible_timeout(&adcdone_data.done, HZ);
 
-	if (!ret)
+	if (timeout <= 0) {
+		dev_warn(mc13xxx->dev, "timed out waiting for ADC completion\n");
 		ret = -ETIMEDOUT;
+	}
 
 	mc13xxx_lock(mc13xxx);
 
 	mc13xxx_irq_free(mc13xxx, MC13XXX_IRQ_ADCDONE, &adcdone_data);
 
+	if (!ret) {
 	if (mode == MC13XXX_ADC_MODE_SINGLE_CHAN) {
 		adc1 &= ~ ((0x7 << MC13XXX_ADC1_CHAN0_SHIFT) |
 				(0x7 << MC13XXX_ADC1_CHAN1_SHIFT));
@@ -646,13 +650,13 @@ int mc13xxx_adc_do_conversion(struct mc13xxx *mc13xxx, unsigned int mode,
 		mc13xxx_reg_write(mc13xxx, MC13XXX_ADC1, adc1);
 	}
 
-	if (ret > 0)
 		for (i = 0; i < 4; ++i) {
 			ret = mc13xxx_reg_read(mc13xxx,
 					MC13XXX_ADC2, &sample[i]);
 			if (ret)
 				break;
 		}
+	}
 
 	if (mode == MC13XXX_ADC_MODE_TS)
 		/* restore TSMOD */
