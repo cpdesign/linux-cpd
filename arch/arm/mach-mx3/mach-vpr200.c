@@ -42,6 +42,7 @@
 #include <linux/gpio_keys.h>
 #include <linux/leds.h>
 #include <linux/clk.h>
+#include <linux/kernel.h>
 
 #include "devices-imx35.h"
 #include "devices.h"
@@ -69,6 +70,14 @@
 
 #define GPIO_SD_CD	IMX_GPIO_NR(3, 1)
 #define GPIO_SD_WP	IMX_GPIO_NR(3, 2)
+
+static long vpr200_blink(int state)
+{
+	gpio_direction_output(GPIO_LEDR, !state);
+
+	return 0;
+}
+
 
 static const struct fb_videomode fb_modedb[] = {
 	{
@@ -398,6 +407,8 @@ static void mxc_init_pcm1774(void)
 static void __init vpr200_board_init(void)
 {
 	mxc_iomux_v3_setup_multiple_pads(vpr200_pads, ARRAY_SIZE(vpr200_pads));
+
+	panic_blink = vpr200_blink;
 
 #if defined(CONFIG_CPU_FREQ_IMX)
 	get_cpu_op = mx35_get_cpu_op;
