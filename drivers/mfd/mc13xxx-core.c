@@ -215,6 +215,7 @@ int mc13xxx_reg_rmw(struct mc13xxx *mc13xxx, unsigned int offset,
 	u32 valread;
 
 	BUG_ON(val & ~mask);
+	BUG_ON(!mutex_is_locked(&mc13xxx->lock));
 
 	ret = mc13xxx_reg_read(mc13xxx, offset, &valread);
 	if (ret)
