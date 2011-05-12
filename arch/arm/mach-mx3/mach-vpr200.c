@@ -171,16 +171,16 @@ static struct platform_device vpr200_led_device = {
 	},
 };
 
-#define VPR_KEY_DEBOUNCE	500
+#define VPR_KEY_DEBOUNCE	100
 static struct gpio_keys_button vpr200_gpio_keys_table[] = {
-	{KEY_F2, GPIO_BUTTON1, 1, "vpr-keys: F2", 0, VPR_KEY_DEBOUNCE},
-	{KEY_F3, GPIO_BUTTON2, 1, "vpr-keys: F3", 0, VPR_KEY_DEBOUNCE},
-	{KEY_F4, GPIO_BUTTON3, 1, "vpr-keys: F4", 0, VPR_KEY_DEBOUNCE},
-	{KEY_F5, GPIO_BUTTON4, 1, "vpr-keys: F5", 0, VPR_KEY_DEBOUNCE},
-	{KEY_F6, GPIO_BUTTON5, 1, "vpr-keys: F6", 0, VPR_KEY_DEBOUNCE},
-	{KEY_F7, GPIO_BUTTON6, 1, "vpr-keys: F7", 0, VPR_KEY_DEBOUNCE},
-	{KEY_F8, GPIO_BUTTON7, 1, "vpr-keys: F8", 1, VPR_KEY_DEBOUNCE},
-	{KEY_F9, GPIO_BUTTON8, 1, "vpr-keys: F9", 1, VPR_KEY_DEBOUNCE},
+	{KEY_F2, GPIO_BUTTON1, 1, "vpr-keys: F2", EV_KEY, 0, VPR_KEY_DEBOUNCE},
+	{KEY_F3, GPIO_BUTTON2, 1, "vpr-keys: F3", EV_KEY, 0, VPR_KEY_DEBOUNCE},
+	{KEY_F4, GPIO_BUTTON3, 1, "vpr-keys: F4", EV_KEY, 0, VPR_KEY_DEBOUNCE},
+	{KEY_F5, GPIO_BUTTON4, 1, "vpr-keys: F5", EV_KEY, 0, VPR_KEY_DEBOUNCE},
+	{KEY_F6, GPIO_BUTTON5, 1, "vpr-keys: F6", EV_KEY, 0, VPR_KEY_DEBOUNCE},
+	{KEY_F7, GPIO_BUTTON6, 1, "vpr-keys: F7", EV_KEY, 0, VPR_KEY_DEBOUNCE},
+	{KEY_F8, GPIO_BUTTON7, 1, "vpr-keys: F8", EV_KEY, 0, VPR_KEY_DEBOUNCE},
+	{KEY_F9, GPIO_BUTTON8, 1, "vpr-keys: F9", EV_KEY, 0, VPR_KEY_DEBOUNCE},
 };
 
 static struct gpio_keys_platform_data vpr200_gpio_keys_data = {
