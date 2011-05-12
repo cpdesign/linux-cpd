@@ -16,6 +16,7 @@
 #include <linux/platform_device.h>
 #include <linux/mutex.h>
 #include <linux/interrupt.h>
+#include <linux/delay.h>
 #include <linux/mfd/core.h>
 #include <linux/mfd/mc13xxx.h>
 
@@ -129,10 +130,12 @@ EXPORT_SYMBOL(mc13783_to_mc13xxx);
 #define MC13XXX_ADC0_CHRGICON		(1 << 1)
 #define MC13XXX_ADC0_LICELLCON		(1 << 0)
 #define MC13XXX_ADC0_CHRGRAWDIV		(1 << 15)
+#define MC13XXX_ADC0_ADRESET		(1 << 8)
 
 #define MC13XXX_ADC1		44
 #define MC13XXX_ADC1_ADEN		(1 << 0)
 #define MC13XXX_ADC1_RAND		(1 << 1)
+#define MC13892_ADC1_ADCCAL		(1 << 2)
 #define MC13XXX_ADC1_ADSEL		(1 << 3)
 #define MC13XXX_ADC1_CHAN0_SHIFT	5
 #define MC13XXX_ADC1_CHAN1_SHIFT	8
@@ -532,6 +535,28 @@ static irqreturn_t mc13xxx_handler_adcdone(int irq, void *data)
 #define MC13XXX_ADC_WORKING	(1 << 0)
 #define MC13XXX_ADC_CAL		(1 << 1)
 
+static int mc13xxx_adc_reset(struct mc13xxx *mc13xxx)
+{
+	int ret;
+	u32 val, mask;
+
+	val = MC13XXX_ADC0_ADRESET;
+	mask = MC13XXX_ADC0_ADRESET;
+
+	ret = mc13xxx_reg_rmw(mc13xxx, MC13XXX_ADC0, mask, val);
+
+	/* Calibrate ADC for mc13892*/
+	if (mc13xxx->ictype == MC13XXX_ID_MC13892) {
+		msleep(50);
+
+		val = MC13XXX_ADC1_ADEN | MC13XXX_ADC1_ASC | MC13892_ADC1_ADCCAL;
+		mask = MC13XXX_ADC1_ADEN | MC13XXX_ADC1_ASC | MC13892_ADC1_ADCCAL;
+		mc13xxx_reg_rmw(mc13xxx, MC13XXX_ADC1, mask, val);
+	}
+
+	return ret;
+}
+
 int mc13xxx_adc_do_conversion(struct mc13xxx *mc13xxx, unsigned int mode,
 		unsigned int channel, unsigned int *sample)
 {
@@ -719,9 +744,7 @@ int mc13xxx_common_init(struct mc13xxx *mc13xxx,
 	ret = request_threaded_irq(irq, NULL, mc13xxx_irq_thread,
 			IRQF_ONESHOT | IRQF_TRIGGER_HIGH, "mc13xxx", mc13xxx);
 
-	if (mc13xxx->ictype == MC13XXX_ID_MC13892) {
-		mc13xxx_reg_rmw(mc13xxx, MC13XXX_ADC1, (1<<2) | (1<<20), (1<<2) | (1<<20));
-	}
+	ret = mc13xxx_adc_reset(mc13xxx);
 
 	if (ret) {
 err_mask:
