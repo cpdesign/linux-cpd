@@ -601,19 +601,23 @@ int mc13xxx_adc_do_conversion(struct mc13xxx *mc13xxx, unsigned int mode,
 
 	switch (mode) {
 	case MC13XXX_ADC_MODE_TS:
+		/*
+		 * for mc13873 this uses position mode,
+		 * mc13892 doesn't care about TSMOD0 when TSMOD1 is set
+		 */
 		adc0 |= MC13XXX_ADC0_ADREFEN | MC13XXX_ADC0_TSMOD0 |
 			MC13XXX_ADC0_TSMOD1;
 		adc1 |= (5 << MC13XXX_ADC1_ATO_SHIFT) | (4 << MC13XXX_ADC1_CHAN1_SHIFT);
 		break;
 
 	case MC13XXX_ADC_MODE_SINGLE_CHAN:
-		adc0 |= old_adc0 & MC13XXX_ADC0_TSMOD_MASK;
+		adc0 |= old_adc0 & MC13XXX_ADC0_TSMOD0;
 		adc1 |= (channel & 0x7) << MC13XXX_ADC1_CHAN0_SHIFT;
 		adc1 |= MC13XXX_ADC1_RAND;
 		break;
 
 	case MC13XXX_ADC_MODE_MULT_CHAN:
-		adc0 |= old_adc0 & MC13XXX_ADC0_TSMOD_MASK;
+		adc0 |= old_adc0 & MC13XXX_ADC0_TSMOD0;
 		adc1 |= 4 << MC13XXX_ADC1_CHAN1_SHIFT;
 		break;
 
