@@ -580,6 +580,7 @@ int mc13xxx_adc_do_conversion(struct mc13xxx *mc13xxx, unsigned int mode,
 	mc13xxx_reg_read(mc13xxx, MC13XXX_ADC0, &old_adc0);
 
 	adc0 = MC13XXX_ADC0_ADINC1 | MC13XXX_ADC0_ADINC2;
+	adc0 |= MC13XXX_ADC0_CHRGRAWDIV;
 
 	if (mode != MC13XXX_ADC_MODE_TS) {
 		if (mc13xxx->adcflags & MC13XXX_ADC_MEASURE_BATT)
@@ -607,18 +608,22 @@ int mc13xxx_adc_do_conversion(struct mc13xxx *mc13xxx, unsigned int mode,
 		 */
 		adc0 |= MC13XXX_ADC0_ADREFEN | MC13XXX_ADC0_TSMOD0 |
 			MC13XXX_ADC0_TSMOD1;
-		adc1 |= (5 << MC13XXX_ADC1_ATO_SHIFT) | (4 << MC13XXX_ADC1_CHAN1_SHIFT);
+		adc1 |= (3 << MC13XXX_ADC1_ATO_SHIFT) | (4 << MC13XXX_ADC1_CHAN1_SHIFT);
 		break;
 
 	case MC13XXX_ADC_MODE_SINGLE_CHAN:
 		adc0 |= old_adc0 & MC13XXX_ADC0_TSMOD0;
 		adc1 |= (channel & 0x7) << MC13XXX_ADC1_CHAN0_SHIFT;
 		adc1 |= MC13XXX_ADC1_RAND;
+		adc1 |= (3 << MC13XXX_ADC1_ATO_SHIFT);
+		adc1 |= MC13XXX_ADC1_ATOX;
 		break;
 
 	case MC13XXX_ADC_MODE_MULT_CHAN:
 		adc0 |= old_adc0 & MC13XXX_ADC0_TSMOD0;
 		adc1 |= 4 << MC13XXX_ADC1_CHAN1_SHIFT;
+		adc1 |= (3 << MC13XXX_ADC1_ATO_SHIFT);
+		adc1 |= MC13XXX_ADC1_ATOX;
 		break;
 
 	default:
