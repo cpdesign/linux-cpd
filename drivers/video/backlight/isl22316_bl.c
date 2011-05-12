@@ -141,8 +141,8 @@ static int __devinit isl22316_probe(struct i2c_client *client,
 		goto err_free;
 	}
 
-	bl->props.max_brightness =
-		bl->props.brightness = ISL22316_MAX_BRIGHTNESS;
+	bl->props.max_brightness = ISL22316_MAX_BRIGHTNESS;
+	bl->props.brightness = ISL22316_MAX_BRIGHTNESS;
 
 	data->bl = bl;
 
@@ -151,6 +151,8 @@ static int __devinit isl22316_probe(struct i2c_client *client,
 		ret = -EIO;
 		goto err_reg;
 	}
+
+	bl->props.brightness = data->current_brightness;
 
 	backlight_update_status(bl);
 
