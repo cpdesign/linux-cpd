@@ -10,6 +10,7 @@
 #define __LINUX_MFD_MC13XXX_H
 
 #include <linux/interrupt.h>
+#include <linux/mutex.h>
 
 struct mc13xxx;
 
