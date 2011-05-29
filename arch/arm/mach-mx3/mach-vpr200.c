@@ -220,6 +220,7 @@ static struct platform_device vpr200_device_gpiokeys = {
 static struct mc13xxx_platform_data vpr200_pmic = {
 	.flags = MC13XXX_USE_ADC |
 		 MC13XXX_USE_BATTERY |
+		 MC13XXX_USE_RTC |
 		 MC13XXX_USE_TOUCHSCREEN,
 };
 
