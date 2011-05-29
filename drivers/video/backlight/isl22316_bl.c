@@ -154,6 +154,10 @@ static int __devinit isl22316_probe(struct i2c_client *client,
 	if (ret < 0)
 		goto err_free;
 
+	props.max_brightness = ISL22316_MAX_BRIGHTNESS;
+	props.brightness = 0;
+	props.type = BACKLIGHT_PLATFORM;
+
 	data->client = client;
 	data->current_brightness = 0;
 	i2c_set_clientdata(client, data);
@@ -165,9 +169,6 @@ static int __devinit isl22316_probe(struct i2c_client *client,
 		ret = PTR_ERR(bl);
 		goto err_free;
 	}
-
-	bl->props.max_brightness = ISL22316_MAX_BRIGHTNESS;
-	bl->props.brightness = ISL22316_MAX_BRIGHTNESS;
 
 	data->bl = bl;
 	data->inverted = 1;
