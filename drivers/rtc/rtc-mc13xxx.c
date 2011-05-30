@@ -349,10 +349,15 @@ static int __devinit mc13xxx_rtc_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_alarm_irq_request;
 
+	/* need to unlock before registering device */
+	mc13xxx_unlock(mc13xxx);
+
 	priv->rtc = rtc_device_register(pdev->name,
 			&pdev->dev, &mc13xxx_rtc_ops, THIS_MODULE);
 	if (IS_ERR(priv->rtc)) {
 		ret = PTR_ERR(priv->rtc);
+
+		mc13xxx_lock(mc13xxx);
 
 		mc13xxx_irq_free(mc13xxx, MC13XXX_IRQ_TODA, priv);
 err_alarm_irq_request:
