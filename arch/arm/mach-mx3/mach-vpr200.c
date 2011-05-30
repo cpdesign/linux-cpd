@@ -44,6 +44,7 @@
 #include <linux/clk.h>
 #include <linux/kernel.h>
 #include <linux/delay.h>
+#include <video/platform_lcd.h>
 
 #include "devices-imx35.h"
 #include "devices.h"
@@ -125,6 +126,25 @@ static struct mx3fb_platform_data mx3fb_pdata = {
 	.name		= "PT0708048",
 	.mode		= fb_modedb,
 	.num_modes	= ARRAY_SIZE(fb_modedb),
+};
+
+static void vpr200_lcd_power_set(struct plat_lcd_data *pd, unsigned int power)
+{
+	pr_info("%s: power %d\n", __func__, power);
+
+	if (power)
+		gpio_direction_output(GPIO_LCDPWR, 0);
+	else
+		gpio_direction_output(GPIO_LCDPWR, 1);
+}
+
+static struct plat_lcd_data vpr200_lcd_power_data = {
+	.set_power = vpr200_lcd_power_set,
+};
+
+static struct platform_device vpr200_lcd_powerdev = {
+	.name = "platform-lcd",
+	.dev.platform_data = &vpr200_lcd_power_data,
 };
 
 static struct physmap_flash_data vpr200_flash_data = {
@@ -370,6 +390,7 @@ static struct platform_device *devices[] __initdata = {
 	&vpr200_flash,
 	&vpr200_device_gpiokeys,
 	&vpr200_led_device,
+	&vpr200_lcd_powerdev,
 };
 
 static const
