@@ -50,6 +50,11 @@
 #include "devices.h"
 #include "cpu_op-mx35.h"
 
+#define VPR200_BOARD_REV	((system_rev >> 8) & 0xff)
+
+#define VPR200_BOARD_V2		0x01
+#define VPR200_BOARD_V3		0x02
+
 #define GPIO_LCDPWR	IMX_GPIO_NR(1, 2)
 #define GPIO_PMIC_INT	IMX_GPIO_NR(2, 0)
 
