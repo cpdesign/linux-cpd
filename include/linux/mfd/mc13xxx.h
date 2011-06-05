@@ -199,6 +199,8 @@ struct mc13xxx_platform_data {
 
 	struct mc13xxx_regulator_platform_data regulators;
 	struct mc13xxx_leds_platform_data *leds;
+
+	void (*platform_misc_init)(struct mc13xxx *);
 };
 
 #define MC13XXX_ADC0		43

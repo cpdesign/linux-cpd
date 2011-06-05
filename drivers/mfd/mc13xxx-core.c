@@ -830,6 +830,9 @@ err_revision:
 
 	mc13xxx_unlock(mc13xxx);
 
+	if (pdata && pdata->platform_misc_init)
+		pdata->platform_misc_init(mc13xxx);
+
 	device_create_file(mc13xxx->dev, &dev_attr_regdump);
 
 	if (pdata->flags & MC13XXX_USE_ADC)
