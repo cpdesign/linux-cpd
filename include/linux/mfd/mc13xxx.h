@@ -218,4 +218,10 @@ struct mc13xxx_platform_data {
 					MC13XXX_ADC0_TSMOD1 | \
 					MC13XXX_ADC0_TSMOD2)
 
+#define MC13XXX_POWER2		15
+#define MC13XXX_POWER2_RESTARTEN	(1 << 0)
+#define MC13XXX_POWER2_PWRON1RSTEN	(1 << 1)
+#define MC13XXX_POWER2_PWRON2RSTEN	(1 << 2)
+#define MC13XXX_POWER2_PWRON3RSTEN	(1 << 3)
+
 #endif /* ifndef __LINUX_MFD_MC13XXX_H */
