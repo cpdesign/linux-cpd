@@ -803,6 +803,12 @@ err_revision:
 }
 EXPORT_SYMBOL_GPL(mc13xxx_common_init);
 
+int mc13xxx_common_cleanup(struct mc13xxx *mc13xxx)
+{
+	return 0;
+}
+EXPORT_SYMBOL_GPL(mc13xxx_common_cleanup);
+
 MODULE_DESCRIPTION("Core driver for Freescale MC13XXX PMIC");
 MODULE_AUTHOR("Uwe Kleine-Koenig <u.kleine-koenig@pengutronix.de>");
 MODULE_LICENSE("GPL v2");

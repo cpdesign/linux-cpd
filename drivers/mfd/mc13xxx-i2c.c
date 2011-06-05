@@ -74,6 +74,8 @@ static int __devexit mc13xxx_i2c_remove(struct i2c_client *client)
 {
 	struct mc13xxx *mc13xxx = dev_get_drvdata(&client->dev);
 
+	mc13xxx_common_cleanup(mc13xxx);
+
 	free_irq(client->irq, mc13xxx);
 
 	mfd_remove_devices(&client->dev);

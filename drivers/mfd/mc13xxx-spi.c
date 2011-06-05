@@ -119,6 +119,8 @@ static int __devexit mc13xxx_spi_remove(struct spi_device *spi)
 {
 	struct mc13xxx *mc13xxx = dev_get_drvdata(&spi->dev);
 
+	mc13xxx_common_cleanup(mc13xxx);
+
 	free_irq(mc13xxx->spidev->irq, mc13xxx);
 
 	mfd_remove_devices(&spi->dev);

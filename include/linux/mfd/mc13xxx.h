@@ -26,6 +26,7 @@ struct mc13xxx_platform_data;
 
 int mc13xxx_common_init(struct mc13xxx *mc13xxx,
 		struct mc13xxx_platform_data *pdata, int irq);
+int mc13xxx_common_cleanup(struct mc13xxx *mc13xxx);
 
 int mc13xxx_get_flags(struct mc13xxx *mc13xxx);
 
