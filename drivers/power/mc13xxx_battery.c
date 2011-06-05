@@ -2,7 +2,7 @@
  *
  */
 
-//#define DEBUG
+#define DEBUG
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -47,6 +47,8 @@
 #define MC13XXX_POWER0_VCOIN_MASK	(0x7 << MC13XXX_POWER0_VCOIN_SHIFT)
 #define MC13XXX_POWER0_COINCHEN		(1 << 23)
 
+#define MC13XXX_MEMORYA		18
+
 #define MC13XXX_CHARGER0	48
 #define MC13XXX_CHARGER0_VCHRG_SHIFT	0
 #define MC13XXX_CHARGER0_VCHRG_MASK	(0x7 << MC13XXX_CHARGER0_VCHRG_SHIFT)
@@ -71,6 +73,9 @@
 #define MC13XXX_BATTERY_CC_CAL_MS	100
 #define MC13XXX_BATTERY_CC_ONEC_VAL	(2621 * 2)
 #define MC13XXX_BATTERY_CHARGE_FULL	10000000
+
+/* when set, contents of the CC are valid */
+#define MC13XXX_BATTERY_MEM_WAS_FULL	(1 << 0)
 
 struct mc13xxx_battery {
 	struct mc13xxx *mc13xxx;
@@ -190,7 +195,7 @@ static int mc13xxx_do_cc_start(struct mc13xxx_battery *batt, int calibrate)
 	int ret;
 	u32 acc0, acc1;
 
-	acc0 = MC13XXX_ACC0_STARTCC | MC13XXX_ACC0_CCDITHER | MC13XXX_ACC0_RSTCC;
+	acc0 = MC13XXX_ACC0_STARTCC | MC13XXX_ACC0_CCDITHER;
 
 	if (calibrate) {
 		acc0 |= MC13XXX_ACC0_CCCALA;
@@ -213,16 +218,30 @@ static int mc13xxx_do_cc_stop(struct mc13xxx_battery *batt)
 	ret = mc13xxx_reg_rmw(batt->mc13xxx, MC13XXX_ACC0,
 			MC13XXX_ACC0_CCCALA | MC13XXX_ACC0_STARTCC, 0);
 
-	pr_info("stopping CC\n");
+	return ret;
+}
+
+static int mc13xxx_do_cc_reset(struct mc13xxx_battery *batt)
+{
+	int ret;
+
+	ret = mc13xxx_reg_rmw(batt->mc13xxx, MC13XXX_ACC0,
+			MC13XXX_ACC0_RSTCC, MC13XXX_ACC0_RSTCC);
 
 	return ret;
 }
 
-static int mc13xxx_do_cc_set_full(struct mc13xxx_battery *batt)
+static int mc13xxx_do_cc_set_full(struct mc13xxx_battery *batt, bool is_full)
 {
-	batt->cc_was_full = true;
+	int ret;
 
-	return mc13xxx_do_cc_start(batt, 0);
+	ret = mc13xxx_reg_rmw(batt->mc13xxx, MC13XXX_MEMORYA,
+			MC13XXX_BATTERY_MEM_WAS_FULL,
+			is_full ? MC13XXX_BATTERY_MEM_WAS_FULL : 0);
+
+	batt->cc_was_full = is_full;
+
+	return mc13xxx_do_cc_reset(batt);
 }
 
 static int mc13xxx_do_restart_charging(struct mc13xxx_battery *batt)
@@ -239,51 +258,14 @@ static int mc13xxx_do_restart_charging(struct mc13xxx_battery *batt)
 	val |= MC13XXX_CHARGER0_TREN;
 	val |= MC13XXX_CHARGER0_CHRGRESTART;
 	val |= MC13XXX_CHARGER0_CHGAUTOVIB;
-//	val |= MC13XXX_CHARGER0_CHGTMRRST;
 	val |= MC13XXX_CHARGER0_THCHKB;
-	val |= MC13XXX_CHARGER0_CYCLB;
+	//val |= MC13XXX_CHARGER0_CYCLB;
 
 	ret = mc13xxx_reg_write(batt->mc13xxx, MC13XXX_CHARGER0, val);
 
 	getrawmonotonic(&batt->charge_start_time);
 
 	return ret;
-}
-
-static int mc13xxx_do_battery_init(struct mc13xxx_battery *batt)
-{
-	int ret;
-	u32 val = 0;
-	u32 mask = 0;
-
-	/* Battery detect enable */
-	val |= MC13XXX_POWER0_BATTDETEN;
-	mask |= MC13XXX_POWER0_BATTDETEN;
-	/* BPSNS = b11 --> LOBATL = 3.1, LOBATH = 3.4 */
-	val |= 0x3 << MC13XXX_POWER0_BPSNS_SHIFT;
-	mask |= MC13XXX_POWER0_BPSNS_MASK;
-
-	ret = mc13xxx_reg_rmw(batt->mc13xxx, MC13XXX_POWER0, mask, val);
-
-	return ret;
-}
-
-static int mc13xxx_do_coincell_init(struct mc13xxx_battery *batt)
-{
-	int ret;
-	u32 mask = 0;
-	u32 val = 0;
-
-	/* VCOIN 0b111 = 3.30V */
-	val |= (0x7 << MC13XXX_POWER0_VCOIN_SHIFT) & MC13XXX_POWER0_VCOIN_MASK;
-	mask |= MC13XXX_POWER0_VCOIN_MASK;
-
-	val |= MC13XXX_POWER0_COINCHEN;
-	mask |= MC13XXX_POWER0_COINCHEN;
-
-	ret = mc13xxx_reg_rmw(batt->mc13xxx, MC13XXX_POWER0, mask, val);
-
-	return 0;
 }
 
 /*
@@ -319,7 +301,7 @@ static int mc13xxx_read_batt_single(struct mc13xxx_battery* batt,
 			MC13XXX_ADC_MODE_SINGLE_CHAN, 1, samples);
 
 	if (ret == -EBUSY) {
-		msleep(20);
+		msleep(10);
 		ret = mc13xxx_adc_do_conversion(batt->mc13xxx,
 				MC13XXX_ADC_MODE_SINGLE_CHAN, 1, samples);
 	}
@@ -399,28 +381,49 @@ static int mc13xxx_battery_power(struct mc13xxx_battery *batt, int *retval)
 	return 0;
 }
 
+static int count_from_reg(u32 reg)
+{
+	return (int)((s16)((u16)(reg >> MC13XXX_ACC0_CCOUT_SHIFT)));
+}
+
 /*
  *
  */
 static int mc13xxx_do_cc_calibrate(struct mc13xxx_battery *batt)
 {
 	int ret;
+	u32 startval = 0;
 	u32 val = 0;
 
-	pr_info("%s, begin", __func__);
+	ret = mc13xxx_reg_read(batt->mc13xxx, MC13XXX_ACC0, &startval);
+	if (ret) {
+		dev_warn(batt->battery.dev, "Couldn't read counter start value\n");
+	}
+
 	ret = mc13xxx_do_cc_start(batt, 1);
-	if (ret)
+	if (ret) {
+		dev_warn(batt->battery.dev, "Couldn't start CC calibration\n");
 		return ret;
+	}
 
 	msleep(MC13XXX_BATTERY_CC_CAL_MS);
 
 	ret = mc13xxx_reg_read(batt->mc13xxx, MC13XXX_ACC0, &val);
-	if (ret)
-		return ret;
+	if (!ret) {
+		int start, finish;
+		start = count_from_reg(startval);
+		finish = count_from_reg(val);
 
-	batt->cc_cal = (int)((s16)((u16)(val >> MC13XXX_ACC0_CCOUT_SHIFT)));
-	pr_info("%s, cc_cal: %d in: %d ms\n", __func__,
-			batt->cc_cal, MC13XXX_BATTERY_CC_CAL_MS);
+		batt->cc_cal = finish - start;
+
+		pr_info("%s: cc_cal: %d in: %d ms\n", __func__,
+				batt->cc_cal, MC13XXX_BATTERY_CC_CAL_MS);
+	} else {
+		dev_warn(batt->battery.dev, "Couldn't read end calibration value\n");
+		batt->cc_cal = 0;
+	}
+
+	mc13xxx_do_cc_stop(batt);
 
 	return ret;
 }
@@ -442,7 +445,7 @@ static int mc13xxx_do_cc_read(struct mc13xxx_battery *batt, int *coulombs)
 		ret = mc13xxx_reg_write(batt->mc13xxx, MC13XXX_ACC0, val);
 	}
 
-	*coulombs = (int)((s16)((u16)(val >> MC13XXX_ACC0_CCOUT_SHIFT)));
+	*coulombs = count_from_reg(val);
 
 	return ret;
 }
@@ -479,7 +482,7 @@ static int mc13xxx_do_cc_update(struct mc13xxx_battery *batt)
 
 	if (abs(coulombs) > 30000) {
 		/* reset the CC before we have an overflow */
-		mc13xxx_do_cc_start(batt, 0);
+		mc13xxx_do_cc_reset(batt);
 	}
 
 //	mc13xxx_cc_adjust(batt, coulombs, &adjusted);
@@ -530,9 +533,10 @@ static int mc13xxx_battery_update(struct mc13xxx_battery *batt)
 				now_battery_online ? "online" : "offline");
 
 		/* can't know whether battery is full or not */
-		batt->cc_was_full = false;
+		mc13xxx_do_cc_set_full(batt, false);
 
 		if (now_battery_online) {
+			mc13xxx_do_cc_calibrate(batt);
 			mc13xxx_do_cc_start(batt, 0);
 		} else {
 			mc13xxx_do_cc_stop(batt);
@@ -546,60 +550,61 @@ static int mc13xxx_battery_update(struct mc13xxx_battery *batt)
 				now_charger_online ? "online" : "offline");
 
 		if (batt->charger_online) {
-			/* note we don't restart charger state - PMIC does it
+			/*
+			 * note we don't restart charger state - PMIC does it
 			 * automatically
 			 */
 			getrawmonotonic(&batt->charge_start_time);
+			mc13xxx_reg_rmw(batt->mc13xxx, MC13XXX_CHARGER0,
+					MC13XXX_CHARGER0_CHGTMRRST, MC13XXX_CHARGER0_CHGTMRRST);
 		}
 	}
 
 	batt->cccv = !!(sens0 & MC13XXX_IRQSENS0_CCCV);
 	batt->chgcurr = !!(sens0 & MC13XXX_IRQSENS0_CHGCURR);
 
-//	pr_info("charger_online: %d cccv: %d chgcurr: %d\n",
-//			batt->charger_online, batt->cccv, batt->chgcurr);
-
 	if (batt->charger_online) {
+		bool is_timeout;
+		bool is_powerlimit = false;
 		struct timespec diff;
-		//struct timespec onehour = {60 * 60, 0};
-		struct timespec twohourplus = {(2 * 60 * 60) + 60, 0};
-	
-		/*
-		pr_info("sens0: 0x%06x. 10:%d 9:%d 8:%d\n", sens0,
-				!!(sens0 & (1 << 10)),
-				!!(sens0 & (1 << 9)),
-				!!(sens0 & (1 << 8)));
-		*/
-
-		chrg_fault = (sens0 >> 8) & 0x3;
-		/* DEBUG, swapped these bits around tyrying to figure out FAULTS*/
-		if (chrg_fault == 0x02) {
-			dev_info(batt->charger.dev, "Charge time out.\n");
-			mc13xxx_do_restart_charging(batt);
-		}
-		/* TODO: found chip errata here where power limiting bit never gets set */
-		if (chrg_fault == 0x01) {
-			dev_info(batt->charger.dev, "Power limiting.\n");
-		}
+		struct timespec chrgtimeout = {(119 * 60) + 45, 0};
 
 		/* */
 		getrawmonotonic(&timenow);
 		diff = timespec_sub(timenow, batt->charge_start_time);
-		if (timespec_compare(&diff, &twohourplus) > 0) {
-			dev_info(batt->charger.dev, "Two hour plus elapsed.. restarting\n");
-			mc13xxx_reg_rmw(batt->mc13xxx, MC13XXX_CHARGER0,
-					MC13XXX_CHARGER0_CHGTMRRST, MC13XXX_CHARGER0_CHGTMRRST);
-			
+		is_timeout = (timespec_compare(&diff, &chrgtimeout) > 0) ? true : false;
+
+		chrg_fault = (sens0 >> 8) & 0x3;
+		if (chrg_fault == 0x03) {
+			dev_info(batt->charger.dev, "PMIC IC die over-temperature\n");
+			// TODO: flag device health
+		} else if (chrg_fault == 0x02) {
+			/*
+			 * Found chip errata where power limiting bit never gets set, and this
+			 * bit is set instead. (applies up to at least v3.2)
+			 *
+			 * Work around is to monitor the charge time and manually restart
+			 * charging.
+			 */
+			dev_info(batt->charger.dev, "Charge time out or power limiting\n");
+			if (!is_timeout) {
+				is_powerlimit = true;
+			}
+		}
+
+		if (is_timeout) {
+			dev_info(batt->charger.dev, "Two hour elapsed.. restarting\n");
+			mc13xxx_do_restart_charging(batt);
+
 		}
 
 		batt->batt_status = POWER_SUPPLY_STATUS_CHARGING;
 
-		if (batt->cccv && abs(battc) < 100000) {
+		if (!is_powerlimit && batt->cccv && (abs(battc) < 150000)) {
 			batt->full_count++;
 			if (batt->full_count > 8) {
 				batt->batt_status = POWER_SUPPLY_STATUS_FULL;
-				// pr_info("battery full, battc: %d\n", battc);
-				mc13xxx_do_cc_set_full(batt);
+				mc13xxx_do_cc_set_full(batt, true);
 			}
 		} else {
 			if (batt->full_count > 4)
@@ -613,7 +618,9 @@ static int mc13xxx_battery_update(struct mc13xxx_battery *batt)
 		batt->full_count = 0;
 	}
 
-	if (batt->battery_online) {
+	if (!batt->battery_online) {
+		batt->batt_capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
+	} else {
 		int cl;
 		mc13xxx_do_cc_update(batt);
 
@@ -626,14 +633,14 @@ static int mc13xxx_battery_update(struct mc13xxx_battery *batt)
 		else if (batt->full_count > 8)
 				cl = POWER_SUPPLY_CAPACITY_LEVEL_FULL;
 		else {
-			if (batt->cc_was_full && batt->cc_read_val > -3000)
+			if (!batt->cc_was_full)
+				cl = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
+			else if (batt->cc_read_val > -3000)
 				cl = POWER_SUPPLY_CAPACITY_LEVEL_HIGH;
 			else
 				cl = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
 		}
 		batt->batt_capacity_level = cl;
-	} else {
-		batt->batt_capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
 	}
 
 out:
@@ -660,6 +667,7 @@ static int mc13xxx_battery_get_charge(struct mc13xxx_battery *batt, int *charge)
 		return 0;
 	}
 
+	//TODO: magic numbers
 	coulombs = batt->cc_read_val * 2;
 
 	if (batt->cc_was_full) {
@@ -669,7 +677,7 @@ static int mc13xxx_battery_get_charge(struct mc13xxx_battery *batt, int *charge)
 		if (*charge > 0)
 			*charge = MC13XXX_BATTERY_CHARGE_FULL;
 		else if (abs(*charge) > MC13XXX_BATTERY_CHARGE_FULL)
-			*charge = 0;
+			*charge = 1;
 		else
 			*charge = MC13XXX_BATTERY_CHARGE_FULL + *charge;
 	} else
@@ -827,6 +835,63 @@ static enum power_supply_property mc13xxx_coincell_props[] = {
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 };
 
+static int mc13xxx_do_battery_init(struct mc13xxx_battery *batt)
+{
+	int ret;
+	u32 sens1;
+	u32 val = 0;
+	u32 mask = 0;
+
+	/* Battery detect enable */
+	val |= MC13XXX_POWER0_BATTDETEN;
+	mask |= MC13XXX_POWER0_BATTDETEN;
+	/* BPSNS = b11 --> LOBATL = 3.1, LOBATH = 3.4 */
+	val |= 0x3 << MC13XXX_POWER0_BPSNS_SHIFT;
+	mask |= MC13XXX_POWER0_BPSNS_MASK;
+
+	ret = mc13xxx_reg_rmw(batt->mc13xxx, MC13XXX_POWER0, mask, val);
+
+	/* restore CC vars */
+	ret = mc13xxx_reg_read(batt->mc13xxx, MC13XXX_MEMORYA, &val);
+	if (!ret) {
+		batt->cc_was_full = val & MC13XXX_BATTERY_MEM_WAS_FULL;
+		// TODO: restore other vars such as calibration
+	}
+
+	ret = mc13xxx_reg_read(batt->mc13xxx, MC13XXX_IRQSENS1, &sens1);
+	if (!ret)
+		batt->battery_online = !(sens1 & MC13XXX_IRQSENS1_BATTDETB);
+
+	if (batt->battery_online) {
+		if (!batt->cc_was_full) {
+			mc13xxx_do_cc_calibrate(batt);
+		}
+		/* ensure CC is running */
+		mc13xxx_do_cc_start(batt, 0);
+	}
+
+	return ret;
+}
+
+static int mc13xxx_do_coincell_init(struct mc13xxx_battery *batt)
+{
+	int ret;
+	u32 mask = 0;
+	u32 val = 0;
+
+	/* VCOIN 0b111 = 3.30V */
+	val |= (0x7 << MC13XXX_POWER0_VCOIN_SHIFT) & MC13XXX_POWER0_VCOIN_MASK;
+	mask |= MC13XXX_POWER0_VCOIN_MASK;
+
+	val |= MC13XXX_POWER0_COINCHEN;
+	mask |= MC13XXX_POWER0_COINCHEN;
+
+	ret = mc13xxx_reg_rmw(batt->mc13xxx, MC13XXX_POWER0, mask, val);
+
+	return 0;
+}
+
+
 static int __devinit mc13xxx_battery_probe(struct platform_device *pdev)
 {
 	struct mc13xxx_battery *batt;
@@ -877,13 +942,13 @@ static int __devinit mc13xxx_battery_probe(struct platform_device *pdev)
 	if (ret)
 		goto coincell_err;
 */
+
 	mc13xxx_lock(batt->mc13xxx);
 	{
 	batt->mc13xxx->adcflags |= MC13XXX_ADC_MEASURE_BATT;
 	batt->mc13xxx->adcflags |= MC13XXX_ADC_MEASURE_CHARGER;
 //	batt->mc13xxx->adcflags |= MC13XXX_ADC_MEASURE_LICELL;
 
-	mc13xxx_do_cc_calibrate(batt);
 	mc13xxx_do_battery_init(batt);
 //	mc13xxx_do_coincell_init(batt);
 
@@ -926,7 +991,7 @@ static int __devexit mc13xxx_battery_remove(struct platform_device *pdev)
 	struct mc13xxx_battery *batt = platform_get_drvdata(pdev);
 
 	mc13xxx_lock(batt->mc13xxx);
-
+	{
 	batt->mc13xxx->adcflags &= ~(MC13XXX_ADC_MEASURE_LICELL |
 			MC13XXX_ADC_MEASURE_CHARGER |
 			MC13XXX_ADC_MEASURE_BATT);
@@ -935,6 +1000,7 @@ static int __devexit mc13xxx_battery_remove(struct platform_device *pdev)
 	mc13xxx_irq_free(batt->mc13xxx, MC13XXX_IRQ_CHGFAULT, batt);
 	mc13xxx_irq_free(batt->mc13xxx, MC13XXX_IRQ_CHGCURR, batt);
 	mc13xxx_irq_free(batt->mc13xxx, MC13XXX_IRQ_CCCV, batt);
+	}
 	mc13xxx_unlock(batt->mc13xxx);
 
 	cancel_delayed_work_sync(&batt->work);
