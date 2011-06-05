@@ -45,6 +45,7 @@
 #include <linux/kernel.h>
 #include <linux/delay.h>
 #include <video/platform_lcd.h>
+#include <video/isl22316_bl.h>
 
 #include "devices-imx35.h"
 #include "devices.h"
@@ -272,10 +273,29 @@ static struct i2c_board_info vpr200_bus1_devices[] = {
 		I2C_BOARD_INFO("bmp085", 0x77),
 	}, {
 		I2C_BOARD_INFO("pcm1774", 0x47),
-	}, {
-		I2C_BOARD_INFO("isl22316", 0x2b), // 010 1011
-	}
+	},
 };
+
+/*
+ * need to register backlight seperately, as early version have
+ * inverted wiper
+ */
+static struct i2c_board_info vpr200_backlight_info = {
+		I2C_BOARD_INFO("isl22316", 0x2b)
+};
+
+static int vpr200_register_backlight(void)
+{
+	struct isl22316_bl_platform_data isl_data;
+
+	isl_data.inverted = 0;
+	vpr200_backlight_info.platform_data = &isl_data;
+
+	if (VPR200_BOARD_REV == VPR200_BOARD_V2)
+		isl_data.inverted = 1;
+
+	return i2c_register_board_info(1, &vpr200_backlight_info, 1);
+}
 
 static iomux_v3_cfg_t vpr200_pads[] = {
 	/* UART1 */
@@ -529,9 +549,11 @@ static void __init vpr200_board_init(void)
 	i2c_register_board_info(1, vpr200_bus1_devices,
 			ARRAY_SIZE(vpr200_bus1_devices));
 
+
 	imx35_add_imx_i2c0(&vpr200_i2c0_data);
 	imx35_add_imx_i2c1(&vpr200_i2c0_data);
 
+	vpr200_register_backlight();
 	mxc_init_pcm1774();
 }
 
