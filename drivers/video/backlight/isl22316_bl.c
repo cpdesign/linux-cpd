@@ -6,7 +6,15 @@
  * Started from code:
  * Copyright 2009-2010 Analog Devices Inc.
  *
- * Licensed under the GPL-2 or later.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  */
 
 #include <linux/module.h>
@@ -20,6 +28,8 @@
 #include <linux/backlight.h>
 #include <linux/leds.h>
 #include <linux/slab.h>
+
+#include <video/isl22316_bl.h>
 
 #define ISL22316_WR	0
 #define ISL22316_IVR	0
@@ -66,8 +76,6 @@ static int isl22316_bl_set(struct backlight_device *bl, int brightness)
 		setbrightness = brightness;
 	}
 
-	pr_info("%s brightness %d\n", __func__, brightness);
-
 	if (data->current_brightness != brightness)
 		ret |= isl22316_write(client, ISL22316_WR, setbrightness);
 
@@ -80,13 +88,7 @@ static int isl22316_bl_set(struct backlight_device *bl, int brightness)
 static int isl22316_bl_update_status(struct backlight_device *bl)
 {
 	int brightness = bl->props.brightness;
-	/*
-	if (bl->props.power != FB_BLANK_UNBLANK)
-		brightness = 0;
 
-	if (bl->props.fb_blank != FB_BLANK_UNBLANK)
-		brightness = 0;
-*/
 	return isl22316_bl_set(bl, brightness);
 }
 
@@ -118,8 +120,6 @@ static int isl22316_bl_setup(struct backlight_device *bl)
 
 	ret = isl22316_read(client, ISL22316_WR, &reg_val);
 
-	pr_info("%s ret: %d, reg_val: 0x%02x\n", __func__, ret, reg_val);
-
 	if (!ret) {
 		if (data->inverted)
 			data->current_brightness = ISL22316_MAX_BRIGHTNESS - reg_val;
@@ -135,6 +135,7 @@ static int __devinit isl22316_probe(struct i2c_client *client,
 {
 	struct backlight_device *bl;
 	struct isl22316_bl *data;
+	struct isl22316_bl_platform_data *pdata;
 	struct backlight_properties props;
 	uint8_t reg_val;
 	int ret;
@@ -149,10 +150,17 @@ static int __devinit isl22316_probe(struct i2c_client *client,
 	if (data == NULL)
 		return -ENOMEM;
 
+	pdata = dev_get_platdata(&client->dev);
+	if (pdata) {
+		dev_info(&client->dev, "Inverted hw values\n");
+		data->inverted = pdata->inverted;
+	}
+
 	ret = isl22316_read(client, ISL22316_ACR, &reg_val);
-	pr_info("%s ACR: %02x\n", __func__, ret);
-	if (ret < 0)
+	if (ret < 0) {
+		dev_err(&client->dev, "Failed to read from IC\n");
 		goto err_free;
+	}
 
 	props.max_brightness = ISL22316_MAX_BRIGHTNESS;
 	props.brightness = 0;
@@ -171,7 +179,6 @@ static int __devinit isl22316_probe(struct i2c_client *client,
 	}
 
 	data->bl = bl;
-	data->inverted = 1;
 
 	ret = isl22316_bl_setup(bl);
 	if (ret) {
