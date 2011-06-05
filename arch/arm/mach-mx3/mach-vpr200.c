@@ -241,11 +241,36 @@ static struct platform_device vpr200_device_gpiokeys = {
 	}
 };
 
+/*
+ * Misc init for the pmic
+ *
+ * We want to make sure that the pwron pins do not turn the unit off if held
+ * down for more than 4 seconds.
+ */
+static void vpr200_pmic_init(struct mc13xxx *mc13xxx)
+{
+	mc13xxx_lock(mc13xxx);
+	{
+		int ret;
+		u32 val = 0, mask = 0;
+		
+		mask |= MC13XXX_POWER2_PWRON1RSTEN |
+			MC13XXX_POWER2_PWRON2RSTEN |
+			MC13XXX_POWER2_PWRON3RSTEN;
+
+		ret = mc13xxx_reg_rmw(mc13xxx, MC13XXX_POWER2, mask, val);
+		if (ret)
+			pr_warn("%s: Bad initialization of PMIC\n", __func__);
+	}
+	mc13xxx_unlock(mc13xxx);
+}
+
 static struct mc13xxx_platform_data vpr200_pmic = {
 	.flags = MC13XXX_USE_ADC |
 		 MC13XXX_USE_BATTERY |
 		 MC13XXX_USE_RTC |
 		 MC13XXX_USE_TOUCHSCREEN,
+	.platform_misc_init = vpr200_pmic_init,
 };
 
 static const struct imxi2c_platform_data vpr200_i2c0_data __initconst = {
