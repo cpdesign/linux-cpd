@@ -135,8 +135,6 @@ static struct mx3fb_platform_data mx3fb_pdata = {
 
 static void vpr200_lcd_power_set(struct plat_lcd_data *pd, unsigned int power)
 {
-	pr_info("%s: power %d\n", __func__, power);
-
 	if (power)
 		gpio_direction_output(GPIO_LCDPWR, 0);
 	else
