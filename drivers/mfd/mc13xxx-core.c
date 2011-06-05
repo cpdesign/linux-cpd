@@ -739,6 +739,61 @@ static int mc13xxx_add_subdevice(struct mc13xxx *mc13xxx, const char *format)
 	return mc13xxx_add_subdevice_pdata(mc13xxx, format, NULL);
 }
 
+static ssize_t dump_reg_binary(char *buf, u32 val)
+{
+	ssize_t ret = 0;
+	int i = 0;
+
+	u32 mask = (1<<23);
+	while (mask) {
+		if (i % 8 == 0) {
+			*buf++ = ' ';
+			ret++;
+		}
+		if (i % 4 == 0) {
+			*buf++ = ' ';
+			ret++;
+		}
+		*buf++ = (mask & val) ? '1' : '0';
+		ret ++;
+		mask >>= 1;
+		i++;
+	}
+
+	return ret;
+}
+
+static ssize_t mc13xxx_regdump_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int i;
+	int ret;
+	ssize_t count = 0;
+	struct mc13xxx *mc13xxx = dev_get_drvdata(dev);
+
+	mc13xxx_lock(mc13xxx);
+
+	/* don't dump the last registers */
+	for (i = 0; i < 55; ++i) {
+		u32 val;
+		ret = mc13xxx_reg_read(mc13xxx, i, &val);
+
+		if (!ret) {
+			count += sprintf(buf + count, "%02d: 0x%06x   ", i, val);
+			count += dump_reg_binary(buf + count, val);
+			count += sprintf(buf + count, "\n");
+		} else {
+			count += sprintf(buf + count, "%02d: error: %d\n", i, ret);
+		}
+	}
+
+	mc13xxx_unlock(mc13xxx);
+
+	return count;
+}
+static DEVICE_ATTR(regdump, S_IRUGO, mc13xxx_regdump_show, NULL);
+
+
 int mc13xxx_common_init(struct mc13xxx *mc13xxx,
 		struct mc13xxx_platform_data *pdata, int irq)
 {
@@ -775,6 +830,8 @@ err_revision:
 
 	mc13xxx_unlock(mc13xxx);
 
+	device_create_file(mc13xxx->dev, &dev_attr_regdump);
+
 	if (pdata->flags & MC13XXX_USE_ADC)
 		mc13xxx_add_subdevice(mc13xxx, "%s-adc");
 
@@ -805,6 +862,8 @@ EXPORT_SYMBOL_GPL(mc13xxx_common_init);
 
 int mc13xxx_common_cleanup(struct mc13xxx *mc13xxx)
 {
+	device_remove_file(mc13xxx->dev, &dev_attr_regdump);
+
 	return 0;
 }
 EXPORT_SYMBOL_GPL(mc13xxx_common_cleanup);
