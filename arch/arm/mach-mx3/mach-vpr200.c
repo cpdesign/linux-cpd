@@ -51,7 +51,8 @@
 #include "devices.h"
 #include "cpu_op-mx35.h"
 
-#define VPR200_BOARD_REV	((system_rev >> 8) & 0xff)
+#define VPR200_CPU_REV		((system_rev >> 8) & 0xff)
+#define VPR200_BOARD_REV	((system_rev) & 0xff)
 
 #define VPR200_BOARD_V2		0x01
 #define VPR200_BOARD_V3		0x02
