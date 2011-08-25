@@ -88,7 +88,6 @@ static long vpr200_blink(int state)
 	return 0;
 }
 
-
 static const struct fb_videomode fb_modedb[] = {
 	{
 		/* 800x480 @ 60 Hz */
@@ -199,13 +198,13 @@ static struct gpio_led vpr200_gpio_leds[] = {
 		.name			= "gpio-led:green:",
 		.gpio			= GPIO_LEDG,
 		.default_trigger	= "heartbeat",
-		.active_low		= 1,
+		.active_low		= 0,
 	},
 	[2] = {
 		.name			= "gpio-led:blue:",
 		.gpio			= GPIO_LEDB,
-		.default_trigger	= "default-off",
-		.active_low		= 1,
+		.default_trigger	= "mmc0",
+		.active_low		= 0,
 	},
 };
 
