@@ -95,13 +95,6 @@ static int isl22316_bl_update_status(struct backlight_device *bl)
 static int isl22316_bl_get_brightness(struct backlight_device *bl)
 {
 	struct isl22316_bl *data = bl_get_data(bl);
-	int ret;
-
-	if (data->inverted) {
-		ret = ISL22316_MAX_BRIGHTNESS - data->current_brightness;
-	} else {
-		ret = data->current_brightness;
-	}
 
 	return data->current_brightness;
 }
@@ -125,6 +118,8 @@ static int isl22316_bl_setup(struct backlight_device *bl)
 			data->current_brightness = ISL22316_MAX_BRIGHTNESS - reg_val;
 		else
 			data->current_brightness = reg_val;
+	} else {
+		dev_err(&client->dev, "Couldn't read backlight register\n");
 	}
 
 	return ret;
@@ -152,7 +147,7 @@ static int __devinit isl22316_probe(struct i2c_client *client,
 
 	pdata = dev_get_platdata(&client->dev);
 	if (pdata) {
-		dev_info(&client->dev, "Inverted hw values\n");
+		dev_info(&client->dev, "Inverted hw values: %d\n", pdata->inverted);
 		data->inverted = pdata->inverted;
 	}
 
@@ -164,7 +159,7 @@ static int __devinit isl22316_probe(struct i2c_client *client,
 
 	props.max_brightness = ISL22316_MAX_BRIGHTNESS;
 	props.brightness = 0;
-	props.type = BACKLIGHT_PLATFORM;
+	props.type = BACKLIGHT_RAW;
 
 	data->client = client;
 	data->current_brightness = 0;
