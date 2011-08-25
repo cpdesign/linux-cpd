@@ -526,6 +526,9 @@ void vpr200_power_off(void)
  */
 static void __init vpr200_board_init(void)
 {
+	pr_info("vpr200: CPU board: 0x%02x Mainboard: 0x%02x\n",
+			VPR200_CPU_REV, VPR200_BOARD_REV);
+
 	mxc_iomux_v3_setup_multiple_pads(vpr200_pads, ARRAY_SIZE(vpr200_pads));
 
 	panic_blink = vpr200_blink;
