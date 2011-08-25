@@ -561,11 +561,6 @@ static void __init vpr200_board_init(void)
 	gpio_request(GPIO_BP_RESET, "BP_RESET");
 	gpio_direction_output(GPIO_BP_RESET, 1);
 
-	if (0 != gpio_request(GPIO_SPEAKER, "SPEAKER"))
-		printk(KERN_WARNING "vpr200: Couldn't get SPEAKER gpio\n");
-	else
-		gpio_direction_output(GPIO_SPEAKER, 0);
-
 	imx35_add_imx_uart0(NULL);
 	imx35_add_imx_uart1(&vpr200_uart1_data);
 	imx35_add_imx_uart2(NULL);
