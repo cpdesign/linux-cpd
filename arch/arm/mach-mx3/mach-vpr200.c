@@ -330,10 +330,19 @@ static int vpr200_register_backlight(void)
 	return i2c_register_board_info(1, &vpr200_backlight_info, 1);
 }
 
+static struct imxuart_platform_data vpr200_uart1_data = {
+	.flags = IMXUART_HAVE_RTSCTS,
+};
+
 static iomux_v3_cfg_t vpr200_pads[] = {
 	/* UART1 */
 	MX35_PAD_TXD1__UART1_TXD_MUX,
 	MX35_PAD_RXD1__UART1_RXD_MUX,
+	/* UART2 */
+	MX35_PAD_TXD2__UART2_TXD_MUX,
+	MX35_PAD_RXD2__UART2_RXD_MUX,
+	MX35_PAD_RTS2__UART2_RTS,
+	MX35_PAD_CTS2__UART2_CTS,
 	/* UART3 */
 	MX35_PAD_ATA_DATA10__UART3_RXD_MUX,
 	MX35_PAD_ATA_DATA11__UART3_TXD_MUX,
@@ -553,6 +562,7 @@ static void __init vpr200_board_init(void)
 		gpio_direction_output(GPIO_SPEAKER, 0);
 
 	imx35_add_imx_uart0(NULL);
+	imx35_add_imx_uart1(&vpr200_uart1_data);
 	imx35_add_imx_uart2(NULL);
 
 	mxc_register_device(&mx3_ipu, &mx3_ipu_data);
