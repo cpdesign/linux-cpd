@@ -704,6 +704,7 @@ int __init mx35_clocks_init()
 	__raw_writel(cgr3, CCM_BASE + CCM_CGR3);
 
 	clk_enable(&iim_clk);
+	clk_enable(&pwm_clk);
 	mx35_read_cpu_rev();
 
 #ifdef CONFIG_MXC_USE_EPIT
