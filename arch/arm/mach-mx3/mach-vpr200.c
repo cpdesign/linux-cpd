@@ -58,6 +58,7 @@
 #define VPR200_BOARD_V3		0x02
 
 #define GPIO_LCDPWR	IMX_GPIO_NR(1, 2)
+#define GPIO_LEDPWR	IMX_GPIO_NR(2, 7)
 #define GPIO_PMIC_INT	IMX_GPIO_NR(2, 0)
 
 #define GPIO_BUTTON1	IMX_GPIO_NR(1, 4)
@@ -137,10 +138,13 @@ static struct mx3fb_platform_data mx3fb_pdata = {
 
 static void vpr200_lcd_power_set(struct plat_lcd_data *pd, unsigned int power)
 {
-	if (power)
+	if (power) {
 		gpio_direction_output(GPIO_LCDPWR, 0);
-	else
+		gpio_direction_output(GPIO_LEDPWR, 1);
+	} else {
+		gpio_direction_output(GPIO_LEDPWR, 0);
 		gpio_direction_output(GPIO_LCDPWR, 1);
+	}
 }
 
 static struct plat_lcd_data vpr200_lcd_power_data = {
@@ -306,19 +310,23 @@ static struct i2c_board_info vpr200_bus1_devices[] = {
  * need to register backlight seperately, as early version have
  * inverted wiper
  */
+static struct isl22316_bl_platform_data isl_data = {
+	.inverted = 0,
+};
+
 static struct i2c_board_info vpr200_backlight_info = {
-		I2C_BOARD_INFO("isl22316", 0x2b)
+		I2C_BOARD_INFO("isl22316", 0x2b),
+		.platform_data = &isl_data,
 };
 
 static int vpr200_register_backlight(void)
 {
-	struct isl22316_bl_platform_data isl_data;
-
-	isl_data.inverted = 0;
-	vpr200_backlight_info.platform_data = &isl_data;
-
-	if (VPR200_BOARD_REV == VPR200_BOARD_V2)
+	if (VPR200_BOARD_REV == VPR200_BOARD_V2) {
+		pr_info("%s: Using legacy backlight settings\n", __func__);
 		isl_data.inverted = 1;
+	} else {
+		pr_info("%s: Using normal backlight settings\n", __func__);
+	}
 
 	return i2c_register_board_info(1, &vpr200_backlight_info, 1);
 }
@@ -526,6 +534,11 @@ static void __init vpr200_board_init(void)
 		printk(KERN_WARNING "vpr200: Couldn't get LCDPWR gpio\n");
 	else
 		gpio_direction_output(GPIO_LCDPWR, 0);
+
+	if (0 != gpio_request(GPIO_LEDPWR, "LEDPWR"))
+		printk(KERN_WARNING "vpr200: Couldn't get LEDPWR gpio\n");
+	else
+		gpio_direction_output(GPIO_LEDPWR, 0);
 
 	if (0 != gpio_request(GPIO_PMIC_INT, "PMIC_INT"))
 		printk(KERN_WARNING "vpr200: Couldn't get PMIC_INT gpio\n");
