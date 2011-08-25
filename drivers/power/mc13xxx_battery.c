@@ -600,9 +600,10 @@ static int mc13xxx_battery_update(struct mc13xxx_battery *batt)
 
 		batt->batt_status = POWER_SUPPLY_STATUS_CHARGING;
 
-		if (!is_powerlimit && batt->cccv && (abs(battc) < 150000)) {
+		if (!is_powerlimit && batt->cccv && (battv > 4100000) && (abs(battc) < 150000)) {
 			batt->full_count++;
 			if (batt->full_count > 8) {
+				batt->full_count = 8;
 				batt->batt_status = POWER_SUPPLY_STATUS_FULL;
 				mc13xxx_do_cc_set_full(batt, true);
 			}
@@ -630,8 +631,8 @@ static int mc13xxx_battery_update(struct mc13xxx_battery *batt)
 		/* LOBATH sense bit set when above threshold */
 		else if (!(sens0 & MC13XXX_IRQSENS0_LOBATH))
 			cl = POWER_SUPPLY_CAPACITY_LEVEL_LOW;
-		else if (batt->full_count > 8)
-				cl = POWER_SUPPLY_CAPACITY_LEVEL_FULL;
+		else if (batt->full_count >= 8)
+			cl = POWER_SUPPLY_CAPACITY_LEVEL_FULL;
 		else {
 			if (!batt->cc_was_full)
 				cl = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
