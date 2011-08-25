@@ -422,6 +422,8 @@ static iomux_v3_cfg_t vpr200_pads[] = {
 	MX35_PAD_SCK4__AUDMUX_AUD4_TXC,
 	/* speaker */
 	MX35_PAD_TX1__GPIO1_14,
+	/* Buzzer */
+	MX35_PAD_GPIO1_1__PWM_PWMO,
 	/* bmp085  */
 	MX35_PAD_ATA_DATA5__GPIO2_18,
 	/* leds */
@@ -597,12 +599,13 @@ static void __init vpr200_board_init(void)
 	i2c_register_board_info(1, vpr200_bus1_devices,
 			ARRAY_SIZE(vpr200_bus1_devices));
 
-
 	imx35_add_imx_i2c0(&vpr200_i2c0_data);
 	imx35_add_imx_i2c1(&vpr200_i2c0_data);
 
 	vpr200_register_backlight();
 	mxc_init_pcm1774();
+
+	imx35_add_mxc_pwm(0);
 }
 
 static void __init vpr200_timer_init(void)
