@@ -12,7 +12,7 @@
  * under the terms of the GNU General Public License version 2 as published by
  * the Free Software Foundation.
  */
-#define DEBUG
+
 #include <linux/platform_device.h>
 #include <linux/mfd/mc13xxx.h>
 #include <linux/kernel.h>
@@ -24,7 +24,7 @@
 
 #define MC13XXX_TS_NAME	"mc13xxx-ts"
 
-#define DEFAULT_SAMPLE_TOLERANCE 100
+#define DEFAULT_SAMPLE_TOLERANCE 50
 
 static unsigned int sample_tolerance = DEFAULT_SAMPLE_TOLERANCE;
 module_param(sample_tolerance, uint, S_IRUGO | S_IWUSR);
@@ -48,8 +48,6 @@ struct mc13xxx_ts_priv {
 
 	unsigned int sample[4];
 
-	int lastx;
-	int lasty;
 	int pendown;
 
 	void (*report_sample)(struct mc13xxx_ts_priv *);
@@ -158,6 +156,14 @@ static void mc13892_ts_report_sample(struct mc13xxx_ts_priv *priv)
 		"x: (%4d,%4d) y: (%4d, %4d) cr: (%4d, %4d)\n",
 		x0, x1, y0, y1, cr0, cr1);
 
+	/* If the contact resistance readings differ by too
+	 * much then don't even bother
+	 */
+	if (abs(cr0 - cr1) > sample_tolerance) {
+		return;
+	}
+
+	/* turn contact resistance into polarity.  */
 	pressure = (cr0 + cr1) / 2;
 	if (pressure >= 4000)
 		pressure = 0;
@@ -175,14 +181,8 @@ static void mc13892_ts_report_sample(struct mc13xxx_ts_priv *priv)
 				x = (x1 + x0) / 2;
 				y = (y1 + y0) / 2;
 
-				if (abs(x - priv->lastx) > 10 ) {
-					input_report_abs(idev, ABS_X, x);
-					priv->lastx = x;
-				}
-				if (abs(y - priv->lasty) > 10 ) {
-					input_report_abs(idev, ABS_Y, y);
-					priv->lasty = y;
-				}
+				input_report_abs(idev, ABS_X, x);
+				input_report_abs(idev, ABS_Y, y);
 
 				dev_dbg(&idev->dev, "report (%d, %d, %d)\n",
 						x, y, pressure);
@@ -200,8 +200,6 @@ static void mc13892_ts_report_sample(struct mc13xxx_ts_priv *priv)
 				input_report_key(idev, BTN_TOUCH, pressure ? 1 : 0);
 
 				dev_dbg(&idev->dev, "report release\n");
-				priv->lastx = -1;
-				priv->lasty = -1;
 
 				input_sync(idev);
 			}
@@ -220,13 +218,15 @@ static void mc13xxx_ts_work(struct work_struct *work)
 	unsigned int channel = 12;
 
 	if (mc13xxx_adc_do_conversion(priv->mc13xxx,
-				mode, channel, priv->sample) == 0)
+				mode, channel, priv->sample) == 0) {
 		priv->report_sample(priv);
-	else
+	} else {
 		dev_err(&priv->idev->dev, "couldn't convert\n");
+		priv->pendown = PENSTATE_UP;
+	}
 
-	if (priv->pendown) {
-		queue_delayed_work(priv->workq, &priv->work, HZ / 50);
+	if (priv->pendown != PENSTATE_UP) {
+		queue_delayed_work(priv->workq, &priv->work, HZ / 100);
 	} else {
 		/* Start ts detection again */
 		mc13xxx_lock(priv->mc13xxx);
