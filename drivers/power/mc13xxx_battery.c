@@ -252,7 +252,7 @@ static int mc13xxx_do_restart_charging(struct mc13xxx_battery *batt)
 	pr_info("%s\n", __func__);
 
 	val = (0x3 << MC13XXX_CHARGER0_VCHRG_SHIFT) & MC13XXX_CHARGER0_VCHRG_MASK;
-	val |= (0xe << MC13XXX_CHARGER0_ICHRG_SHIFT) & MC13XXX_CHARGER0_ICHRG_MASK;
+	val |= (0xd << MC13XXX_CHARGER0_ICHRG_SHIFT) & MC13XXX_CHARGER0_ICHRG_MASK;
 	val |= (0x3 << MC13XXX_CHARGER0_PLIM_SHIFT) & MC13XXX_CHARGER0_PLIM_MASK;
 
 	val |= MC13XXX_CHARGER0_TREN;
