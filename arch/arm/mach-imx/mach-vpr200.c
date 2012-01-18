@@ -227,7 +227,7 @@ static struct mc13xxx_platform_data vpr200_pmic = {
 };
 
 static const struct imxi2c_platform_data vpr200_i2c0_data __initconst = {
-	.bitrate = 50000,
+	.bitrate = 100000,
 };
 
 static struct at24_platform_data vpr200_eeprom = {
@@ -305,6 +305,9 @@ static iomux_v3_cfg_t vpr200_pads[] = {
 	MX35_PAD_SD1_DATA3__ESDHC1_DAT3,
 	MX35_PAD_ATA_DA1__GPIO3_1,
 	MX35_PAD_ATA_DA2__GPIO3_2,
+	/* I2C1 */
+	MX35_PAD_I2C1_CLK__I2C1_SCL,
+	MX35_PAD_I2C1_DAT__I2C1_SDA,
 	/* PMIC */
 	MX35_PAD_GPIO2_0__GPIO2_0,
 	/* GPIO keys */
