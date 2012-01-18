@@ -557,8 +557,9 @@ int mc13xxx_adc_do_conversion(struct mc13xxx *mc13xxx, unsigned int mode,
 		break;
 
 	default:
-		mc13xxx_unlock(mc13xxx);
-		return -EINVAL;
+		dev_warn(mc13xxx->dev, "%s: bad ADC mode requested\n", __func__);
+		ret = -EINVAL;
+		goto out_flag;
 	}
 
 	dev_dbg(mc13xxx->dev, "%s: request irq\n", __func__);
@@ -608,6 +609,7 @@ int mc13xxx_adc_do_conversion(struct mc13xxx *mc13xxx, unsigned int mode,
 		/* restore TSMOD */
 		mc13xxx_reg_write(mc13xxx, MC13XXX_ADC0, old_adc0);
 
+out_flag:
 	mc13xxx->adcflags &= ~MC13XXX_ADC_WORKING;
 out:
 	mc13xxx_unlock(mc13xxx);
