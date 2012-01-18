@@ -246,11 +246,20 @@ static struct i2c_board_info vpr200_i2c_devices[] = {
 	}
 };
 
+static struct imxuart_platform_data vpr200_uart1_data = {
+	.flags = IMXUART_HAVE_RTSCTS,
+};
+
 static iomux_v3_cfg_t vpr200_pads[] = {
-	/* UART1 */
+	/* uart0 (note: UART1 on schematics) */
 	MX35_PAD_TXD1__UART1_TXD_MUX,
 	MX35_PAD_RXD1__UART1_RXD_MUX,
-	/* UART3 */
+	/* uart1 (note: UART2 on schematics) */
+	MX35_PAD_TXD2__UART2_TXD_MUX,
+	MX35_PAD_RXD2__UART2_RXD_MUX,
+	MX35_PAD_RTS2__UART2_RTS,
+	MX35_PAD_CTS2__UART2_CTS,
+	/* uart2 (note: UART3 on schematics) */
 	MX35_PAD_ATA_DATA10__UART3_RXD_MUX,
 	MX35_PAD_ATA_DATA11__UART3_TXD_MUX,
 	/* FEC */
@@ -424,6 +433,7 @@ static void __init vpr200_board_init(void)
 		gpio_direction_input(GPIO_PMIC_INT);
 
 	imx35_add_imx_uart0(NULL);
+	imx35_add_imx_uart1(&vpr200_uart1_data);
 	imx35_add_imx_uart2(NULL);
 
 	imx35_add_ipu_core(&mx3_ipu_data);
