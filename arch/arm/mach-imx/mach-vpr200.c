@@ -39,6 +39,8 @@
 #include <linux/delay.h>
 #include <linux/clk.h>
 
+#include <video/platform_lcd.h>
+
 #include "devices-imx35.h"
 
 #define VPR200_CPU_REV		((system_rev >> 8) & 0xff)
@@ -48,6 +50,7 @@
 #define VPR200_BOARD_V3		0x02
 
 #define GPIO_LCDPWR	IMX_GPIO_NR(1, 2)
+#define GPIO_LEDPWR	IMX_GPIO_NR(2, 7)
 #define GPIO_PMIC_INT	IMX_GPIO_NR(2, 0)
 
 #define GPIO_BUTTON1	IMX_GPIO_NR(1, 4)
@@ -117,6 +120,26 @@ static struct mx3fb_platform_data mx3fb_pdata __initdata = {
 	.name		= "PT0708048",
 	.mode		= fb_modedb,
 	.num_modes	= ARRAY_SIZE(fb_modedb),
+};
+
+static void vpr200_lcd_power_set(struct plat_lcd_data *pd, unsigned int power)
+{
+	if (power) {
+		gpio_direction_output(GPIO_LCDPWR, 0);
+		gpio_direction_output(GPIO_LEDPWR, 1);
+	} else {
+		gpio_direction_output(GPIO_LEDPWR, 0);
+		gpio_direction_output(GPIO_LCDPWR, 1);
+	}
+}
+
+static struct plat_lcd_data vpr200_lcd_power_data = {
+	.set_power = vpr200_lcd_power_set,
+};
+
+static struct platform_device vpr200_lcd_powerdev = {
+	.name = "platform-lcd",
+	.dev.platform_data = &vpr200_lcd_power_data,
 };
 
 static struct physmap_flash_data vpr200_flash_data = {
@@ -324,6 +347,7 @@ static const struct mxc_usbh_platform_data usb_host_pdata __initconst = {
 static struct platform_device *devices[] __initdata = {
 	&vpr200_flash,
 	&vpr200_led_device,
+	&vpr200_lcd_powerdev,
 };
 
 
@@ -385,6 +409,11 @@ static void __init vpr200_board_init(void)
 		printk(KERN_WARNING "vpr200: Couldn't get LCDPWR gpio\n");
 	else
 		gpio_direction_output(GPIO_LCDPWR, 0);
+
+	if (0 != gpio_request(GPIO_LEDPWR, "LEDPWR"))
+		printk(KERN_WARNING "vpr200: Couldn't get LEDPWR gpio\n");
+	else
+		gpio_direction_output(GPIO_LEDPWR, 0);
 
 	if (0 != gpio_request(GPIO_PMIC_INT, "PMIC_INT"))
 		printk(KERN_WARNING "vpr200: Couldn't get PMIC_INT gpio\n");
