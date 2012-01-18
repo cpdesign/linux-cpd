@@ -63,6 +63,9 @@
 #define GPIO_LEDG	IMX_GPIO_NR(3, 15)
 #define GPIO_LEDB	IMX_GPIO_NR(3, 30)
 
+#define GPIO_SD_CD	IMX_GPIO_NR(3, 1)
+#define GPIO_SD_WP	IMX_GPIO_NR(3, 2)
+
 static long vpr200_blink(int state)
 {
 	gpio_direction_output(GPIO_LEDR, !state);
@@ -171,6 +174,13 @@ static struct platform_device vpr200_led_device = {
 	},
 };
 
+static struct esdhc_platform_data sd1_pdata = {
+	.wp_gpio = GPIO_SD_WP,
+	.cd_gpio = GPIO_SD_CD,
+	.wp_type = ESDHC_WP_GPIO,
+	.cd_type = ESDHC_CD_GPIO,
+};
+
 #define VPR_KEY_DEBOUNCE	100
 static struct gpio_keys_button vpr200_gpio_keys_table[] = {
 	{KEY_F2, GPIO_BUTTON1, 1, "vpr-keys: F2", EV_KEY, 0, VPR_KEY_DEBOUNCE},
@@ -270,6 +280,8 @@ static iomux_v3_cfg_t vpr200_pads[] = {
 	MX35_PAD_SD1_DATA1__ESDHC1_DAT1,
 	MX35_PAD_SD1_DATA2__ESDHC1_DAT2,
 	MX35_PAD_SD1_DATA3__ESDHC1_DAT3,
+	MX35_PAD_ATA_DA1__GPIO3_1,
+	MX35_PAD_ATA_DA2__GPIO3_2,
 	/* PMIC */
 	MX35_PAD_GPIO2_0__GPIO2_0,
 	/* GPIO keys */
@@ -389,7 +401,7 @@ static void __init vpr200_board_init(void)
 	imx35_add_mxc_ehci_hs(&usb_host_pdata);
 
 	imx35_add_mxc_nand(&vpr200_nand_board_info);
-	imx35_add_sdhci_esdhc_imx(0, NULL);
+	imx35_add_sdhci_esdhc_imx(0, &sd1_pdata);
 
 	i2c_register_board_info(0, vpr200_i2c_devices,
 			ARRAY_SIZE(vpr200_i2c_devices));
