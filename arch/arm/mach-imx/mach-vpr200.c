@@ -39,6 +39,12 @@
 
 #include "devices-imx35.h"
 
+#define VPR200_CPU_REV		((system_rev >> 8) & 0xff)
+#define VPR200_BOARD_REV	((system_rev) & 0xff)
+
+#define VPR200_BOARD_V2		0x01
+#define VPR200_BOARD_V3		0x02
+
 #define GPIO_LCDPWR	IMX_GPIO_NR(1, 2)
 #define GPIO_PMIC_INT	IMX_GPIO_NR(2, 0)
 
@@ -270,6 +276,9 @@ static struct platform_device *devices[] __initdata = {
 static void __init vpr200_board_init(void)
 {
 	imx35_soc_init();
+
+	pr_info("vpr200: CPU board: 0x%02x Mainboard: 0x%02x\n",
+			VPR200_CPU_REV, VPR200_BOARD_REV);
 
 	mxc_iomux_v3_setup_multiple_pads(vpr200_pads, ARRAY_SIZE(vpr200_pads));
 
