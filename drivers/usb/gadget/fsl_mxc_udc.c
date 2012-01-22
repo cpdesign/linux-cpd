@@ -23,6 +23,9 @@
 static struct clk *mxc_ahb_clk;
 static struct clk *mxc_usb_clk;
 
+#define USBCTRL_OTGBASE_OFFSET		0x600
+#define USBCTRL_OTG_POWER_MASK		(1 << 24)
+
 /* workaround ENGcm09152 for i.MX35 */
 #define USBPHYCTRL_OTGBASE_OFFSET	0x608
 #define USBPHYCTRL_EVDO			(1 << 23)
@@ -100,6 +103,17 @@ void fsl_udc_clk_finalize(struct platform_device *pdev)
 				MX35_IO_ADDRESS(MX35_USB_BASE_ADDR +
 					USBPHYCTRL_OTGBASE_OFFSET));
 		}
+	}
+
+	/* workaround for hardware without OC or VBUS connected */
+	if (pdata->workaround & FLS_USB2_WORKAROUND_NO_VBUS_OC) {
+		unsigned int v;
+		v = readl(MX35_IO_ADDRESS(MX35_USB_BASE_ADDR +
+				USBCTRL_OTGBASE_OFFSET));
+		v |= USBCTRL_OTG_POWER_MASK;
+		writel(v, MX35_IO_ADDRESS(MX35_USB_BASE_ADDR +
+				USBCTRL_OTGBASE_OFFSET));
+		pr_warn("Not using VBUS or OC. (reg = %08x)\n", v);
 	}
 
 	/* ULPI transceivers don't need usbpll */
