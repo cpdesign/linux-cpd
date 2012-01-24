@@ -548,9 +548,9 @@ config TOUCHSCREEN_USB_COMPOSITE
 	  To compile this driver as a module, choose M here: the
 	  module will be called usbtouchscreen.
 
-config TOUCHSCREEN_MC13783
-	tristate "Freescale MC13783 touchscreen input driver"
-	depends on MFD_MC13783
+config TOUCHSCREEN_MC13XXX
+	tristate "Freescale MC13xxx touchscreen input driver"
+	depends on MFD_MC13XXX
 	help
 	  Say Y here if you have an Freescale MC13783 PMIC on your
 	  board and want to use its touchscreen
@@ -558,7 +558,7 @@ config TOUCHSCREEN_MC13783
 	  If unsure, say N.
 
 	  To compile this driver as a module, choose M here: the
-	  module will be called mc13783_ts.
+	  module will be called mc13xxx_ts.
 
 config TOUCHSCREEN_USB_EGALAX
 	default y

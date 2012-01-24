@@ -1,5 +1,5 @@
 /*
- * Driver for the Freescale Semiconductor MC13783 touchscreen.
+ * Driver for the Freescale Semiconductor MC13XXX touchscreen.
  *
  * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
  * Copyright (C) 2009 Sascha Hauer, Pengutronix
@@ -12,7 +12,7 @@
  * the Free Software Foundation.
  */
 #include <linux/platform_device.h>
-#include <linux/mfd/mc13783.h>
+#include <linux/mfd/mc13xxx.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/input.h>
@@ -20,7 +20,7 @@
 #include <linux/slab.h>
 #include <linux/init.h>
 
-#define MC13783_TS_NAME	"mc13783-ts"
+#define MC13XXX_TS_NAME	"mc13xxx-ts"
 
 #define DEFAULT_SAMPLE_TOLERANCE 300
 
@@ -33,7 +33,7 @@ MODULE_PARM_DESC(sample_tolerance,
 		"is supposed to be wrong and is discarded.  Set to 0 to "
 		"disable this check.");
 
-struct mc13783_ts_priv {
+struct mc13xxx_ts_priv {
 	struct input_dev *idev;
 	struct mc13xxx *mc13xxx;
 	struct delayed_work work;
@@ -41,9 +41,9 @@ struct mc13783_ts_priv {
 	unsigned int sample[4];
 };
 
-static irqreturn_t mc13783_ts_handler(int irq, void *data)
+static irqreturn_t mc13xxx_ts_handler(int irq, void *data)
 {
-	struct mc13783_ts_priv *priv = data;
+	struct mc13xxx_ts_priv *priv = data;
 
 	mc13xxx_irq_ack(priv->mc13xxx, irq);
 
@@ -67,7 +67,7 @@ static irqreturn_t mc13783_ts_handler(int irq, void *data)
 			swap(a0, a1);					\
 		})
 
-static void mc13783_ts_report_sample(struct mc13783_ts_priv *priv)
+static void mc13xxx_ts_report_sample(struct mc13xxx_ts_priv *priv)
 {
 	struct input_dev *idev = priv->idev;
 	int x0, x1, x2, y0, y1, y2;
@@ -117,21 +117,21 @@ static void mc13783_ts_report_sample(struct mc13783_ts_priv *priv)
 		dev_dbg(&idev->dev, "discard event\n");
 }
 
-static void mc13783_ts_work(struct work_struct *work)
+static void mc13xxx_ts_work(struct work_struct *work)
 {
-	struct mc13783_ts_priv *priv =
-		container_of(work, struct mc13783_ts_priv, work.work);
+	struct mc13xxx_ts_priv *priv =
+		container_of(work, struct mc13xxx_ts_priv, work.work);
 	unsigned int mode = MC13XXX_ADC_MODE_TS;
 	unsigned int channel = 12;
 
 	if (mc13xxx_adc_do_conversion(priv->mc13xxx,
 				mode, channel, priv->sample) == 0)
-		mc13783_ts_report_sample(priv);
+		mc13xxx_ts_report_sample(priv);
 }
 
-static int mc13783_ts_open(struct input_dev *dev)
+static int mc13xxx_ts_open(struct input_dev *dev)
 {
-	struct mc13783_ts_priv *priv = input_get_drvdata(dev);
+	struct mc13xxx_ts_priv *priv = input_get_drvdata(dev);
 	int ret;
 
 	mc13xxx_lock(priv->mc13xxx);
@@ -139,7 +139,7 @@ static int mc13783_ts_open(struct input_dev *dev)
 	mc13xxx_irq_ack(priv->mc13xxx, MC13XXX_IRQ_TS);
 
 	ret = mc13xxx_irq_request(priv->mc13xxx, MC13XXX_IRQ_TS,
-		mc13783_ts_handler, MC13783_TS_NAME, priv);
+		mc13xxx_ts_handler, MC13XXX_TS_NAME, priv);
 	if (ret)
 		goto out;
 
@@ -152,9 +152,9 @@ out:
 	return ret;
 }
 
-static void mc13783_ts_close(struct input_dev *dev)
+static void mc13xxx_ts_close(struct input_dev *dev)
 {
-	struct mc13783_ts_priv *priv = input_get_drvdata(dev);
+	struct mc13xxx_ts_priv *priv = input_get_drvdata(dev);
 
 	mc13xxx_lock(priv->mc13xxx);
 	mc13xxx_reg_rmw(priv->mc13xxx, MC13XXX_ADC0,
@@ -165,9 +165,9 @@ static void mc13783_ts_close(struct input_dev *dev)
 	cancel_delayed_work_sync(&priv->work);
 }
 
-static int __init mc13783_ts_probe(struct platform_device *pdev)
+static int __init mc13xxx_ts_probe(struct platform_device *pdev)
 {
-	struct mc13783_ts_priv *priv;
+	struct mc13xxx_ts_priv *priv;
 	struct input_dev *idev;
 	int ret = -ENOMEM;
 
@@ -176,19 +176,19 @@ static int __init mc13783_ts_probe(struct platform_device *pdev)
 	if (!priv || !idev)
 		goto err_free_mem;
 
-	INIT_DELAYED_WORK(&priv->work, mc13783_ts_work);
+	INIT_DELAYED_WORK(&priv->work, mc13xxx_ts_work);
 	priv->mc13xxx = dev_get_drvdata(pdev->dev.parent);
 	priv->idev = idev;
 
 	/*
-	 * We need separate workqueue because mc13783_adc_do_conversion
+	 * We need separate workqueue because mc13xxx_adc_do_conversion
 	 * uses keventd and thus would deadlock.
 	 */
-	priv->workq = create_singlethread_workqueue("mc13783_ts");
+	priv->workq = create_singlethread_workqueue("mc13xxx_ts");
 	if (!priv->workq)
 		goto err_free_mem;
 
-	idev->name = MC13783_TS_NAME;
+	idev->name = MC13XXX_TS_NAME;
 	idev->dev.parent = &pdev->dev;
 
 	idev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
@@ -197,8 +197,8 @@ static int __init mc13783_ts_probe(struct platform_device *pdev)
 	input_set_abs_params(idev, ABS_Y, 0, 0xfff, 0, 0);
 	input_set_abs_params(idev, ABS_PRESSURE, 0, 0xfff, 0, 0);
 
-	idev->open = mc13783_ts_open;
-	idev->close = mc13783_ts_close;
+	idev->open = mc13xxx_ts_open;
+	idev->close = mc13xxx_ts_close;
 
 	input_set_drvdata(idev, priv);
 
@@ -220,9 +220,9 @@ err_free_mem:
 	return ret;
 }
 
-static int __devexit mc13783_ts_remove(struct platform_device *pdev)
+static int __devexit mc13xxx_ts_remove(struct platform_device *pdev)
 {
-	struct mc13783_ts_priv *priv = platform_get_drvdata(pdev);
+	struct mc13xxx_ts_priv *priv = platform_get_drvdata(pdev);
 
 	platform_set_drvdata(pdev, NULL);
 
@@ -233,27 +233,35 @@ static int __devexit mc13783_ts_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static struct platform_driver mc13783_ts_driver = {
-	.remove		= __devexit_p(mc13783_ts_remove),
+const struct platform_device_id mc13xxx_ts_idtable[] = {
+	{
+		.name = "mc13783-ts",
+	},
+	{ }
+};
+
+static struct platform_driver mc13xxx_ts_driver = {
+	.id_table	= mc13xxx_ts_idtable,
+	.remove		= __devexit_p(mc13xxx_ts_remove),
 	.driver		= {
 		.owner	= THIS_MODULE,
-		.name	= MC13783_TS_NAME,
+		.name	= MC13XXX_TS_NAME,
 	},
 };
 
-static int __init mc13783_ts_init(void)
+static int __init mc13xxx_ts_init(void)
 {
-	return platform_driver_probe(&mc13783_ts_driver, &mc13783_ts_probe);
+	return platform_driver_probe(&mc13xxx_ts_driver, &mc13xxx_ts_probe);
 }
-module_init(mc13783_ts_init);
+module_init(mc13xxx_ts_init);
 
-static void __exit mc13783_ts_exit(void)
+static void __exit mc13xxx_ts_exit(void)
 {
-	platform_driver_unregister(&mc13783_ts_driver);
+	platform_driver_unregister(&mc13xxx_ts_driver);
 }
-module_exit(mc13783_ts_exit);
+module_exit(mc13xxx_ts_exit);
 
-MODULE_DESCRIPTION("MC13783 input touchscreen driver");
+MODULE_DESCRIPTION("MC13xxx input touchscreen driver");
 MODULE_AUTHOR("Sascha Hauer <s.hauer@pengutronix.de>");
 MODULE_LICENSE("GPL v2");
-MODULE_ALIAS("platform:" MC13783_TS_NAME);
+MODULE_ALIAS("platform:" MC13XXX_TS_NAME);
