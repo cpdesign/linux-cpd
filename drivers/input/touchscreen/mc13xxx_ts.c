@@ -197,9 +197,13 @@ static void mc13xxx_ts_work(struct work_struct *work)
 		container_of(work, struct mc13xxx_ts_priv, work.work);
 	unsigned int mode = MC13XXX_ADC_MODE_TS;
 	unsigned int channel = 12;
+	u32 adc1_mask = MC13XXX_ADC1_ATOX | MC13XXX_ADC1_ATO_MASK;
+	u32 adc1_val = MC13XXX_ADC1_ATOX | (3 << MC13XXX_ADC1_ATO_SHIFT);
 
-	if (mc13xxx_adc_do_conversion(priv->mc13xxx,
-				mode, channel, priv->sample) == 0) {
+	if (mc13xxx_adc_do_conversion_ex(priv->mc13xxx,
+				mode, channel, priv->sample,
+				0, 0,
+				adc1_mask, adc1_val) == 0) {
 		mc13xxx_ts_report_sample(priv);
 	} else {
 		dev_warn(&priv->idev->dev, "bad conversion");
