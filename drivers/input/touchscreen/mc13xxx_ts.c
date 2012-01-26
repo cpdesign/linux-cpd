@@ -199,8 +199,12 @@ static void mc13xxx_ts_work(struct work_struct *work)
 	unsigned int channel = 12;
 
 	if (mc13xxx_adc_do_conversion(priv->mc13xxx,
-				mode, channel, priv->sample) == 0)
+				mode, channel, priv->sample) == 0) {
 		mc13xxx_ts_report_sample(priv);
+	} else {
+		dev_warn(&priv->idev->dev, "bad conversion");
+		queue_delayed_work(priv->workq, &priv->work, HZ / 50);
+	}
 }
 
 static int mc13xxx_ts_open(struct input_dev *dev)
