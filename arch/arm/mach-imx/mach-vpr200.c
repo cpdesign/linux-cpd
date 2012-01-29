@@ -237,6 +237,8 @@ static iomux_v3_cfg_t vpr200_pads[] = {
 	MX35_PAD_TX5_RX0__GPIO1_10,
 	MX35_PAD_TX4_RX1__GPIO1_11,
 	MX35_PAD_TX3_RX2__GPIO1_12,
+
+	MX35_PAD_USBOTG_OC__USB_TOP_USBOTG_OC,
 };
 
 /* USB Device config */
