@@ -61,7 +61,7 @@ config TEST_POWER
 	tristate "Test power driver"
 	help
 	  This driver is used for testing. It's safe to say M here.
-
+	  
 config BATTERY_DS2760
 	tristate "DS2760 battery driver (HP iPAQ & others)"
 	depends on W1 && W1_SLAVE_DS2760
@@ -203,6 +203,13 @@ config BATTERY_INTEL_MID
 	help
 	  Say Y here to enable the battery driver on Intel MID
 	  platforms.
+
+config MC13XXX_BATTERY
+	tristate "MC13xxx Battery and Charger driver."
+	depends on MFD_MC13XXX
+	help
+	  Say Y here to enable the battery and charger support for the
+	  MC13XXX.
 
 config CHARGER_ISP1704
 	tristate "ISP1704 USB Charger Detection"

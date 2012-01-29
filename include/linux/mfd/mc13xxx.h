@@ -46,6 +46,7 @@ int mc13xxx_adc_do_conversion_ex(struct mc13xxx *mc13xxx,
 #define MC13XXX_IRQ_ADCBISDONE	1
 #define MC13XXX_IRQ_TS		2
 #define MC13XXX_IRQ_CHGDET	6
+#define MC13XXX_IRQ_CHGFAULT	7
 #define MC13XXX_IRQ_CHGREV	8
 #define MC13XXX_IRQ_CHGSHORT	9
 #define MC13XXX_IRQ_CCCV	10
@@ -158,16 +159,66 @@ struct mc13xxx_buttons_platform_data {
 	unsigned short b3on_key;
 };
 
+struct mc13892_battery_platform_data {
+/* VCHRG[2:0] */
+#define MC13892_BATTERY_VCHRG_3800mV		0x0
+#define MC13892_BATTERY_VCHRG_4100mV		0x1
+#define MC13892_BATTERY_VCHRG_4150mV		0x2
+#define MC13892_BATTERY_VCHRG_4200mV		0x3
+#define MC13892_BATTERY_VCHRG_4250mV		0x4
+#define MC13892_BATTERY_VCHRG_4300mV		0x5
+#define MC13892_BATTERY_VCHRG_4375mV		0x6
+#define MC13892_BATTERY_VCHRG_4450mV		0x7
+	int vchrg;
+
+/* ICHRG[3:0] */
+#define MC13892_BATTERY_ICHRG_STANDALONE	(-1)
+#define MC13892_BATTERY_ICHRG_0mA		0x0
+#define MC13892_BATTERY_ICHRG_80mA		0x1
+#define MC13892_BATTERY_ICHRG_240mA		0x2
+#define MC13892_BATTERY_ICHRG_320mA		0x3
+#define MC13892_BATTERY_ICHRG_400mA		0x4
+#define MC13892_BATTERY_ICHRG_480mA		0x5
+#define MC13892_BATTERY_ICHRG_560mA		0x6
+#define MC13892_BATTERY_ICHRG_640mA		0x7
+#define MC13892_BATTERY_ICHRG_720mA		0x8
+#define MC13892_BATTERY_ICHRG_800mA		0x9
+#define MC13892_BATTERY_ICHRG_880mA		0xa
+#define MC13892_BATTERY_ICHRG_960mA		0xb
+#define MC13892_BATTERY_ICHRG_1040mA		0xc
+#define MC13892_BATTERY_ICHRG_1200mA		0xd
+	int ichrg;
+
+/* PLIM[1:0] */
+#define MC13892_BATTERY_PLIM_DISABLE		(-1)
+#define MC13892_BATTERY_PLIM_600mW		0x0
+#define MC13892_BATTERY_PLIM_800mW		0x1
+#define MC13892_BATTERY_PLIM_1000mW		0x2
+#define MC13892_BATTERY_PLIM_1200mW		0x3
+	int plim;
+
+	int battery_nominal_capacity_uAh;
+
+	/* number of coulombs to count as onec */
+	int cc_onec_multiplier;
+
+	/* End of charge parameters */
+	int eoc_battery_min_uV;
+	int eoc_current_max_uA;
+};
+
 struct mc13xxx_platform_data {
 #define MC13XXX_USE_TOUCHSCREEN (1 << 0)
 #define MC13XXX_USE_CODEC	(1 << 1)
 #define MC13XXX_USE_ADC		(1 << 2)
 #define MC13XXX_USE_RTC		(1 << 3)
+#define MC13XXX_USE_BATTERY	(1 << 4)
 	unsigned int flags;
 
 	struct mc13xxx_regulator_platform_data regulators;
 	struct mc13xxx_leds_platform_data *leds;
 	struct mc13xxx_buttons_platform_data *buttons;
+	struct mc13892_battery_platform_data *battery;
 };
 
 #define MC13XXX_ADC_MODE_TS		1

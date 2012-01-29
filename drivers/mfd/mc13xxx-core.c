@@ -761,6 +761,10 @@ err_revision:
 		mc13xxx_add_subdevice_pdata(mc13xxx, "%s-pwrbutton",
 				pdata->buttons, sizeof(*pdata->buttons));
 
+	if (pdata->battery)
+		mc13xxx_add_subdevice_pdata(mc13xxx, "%s-battery",
+				pdata->battery, sizeof(*pdata->battery));
+
 	return 0;
 }
 EXPORT_SYMBOL_GPL(mc13xxx_common_init);
