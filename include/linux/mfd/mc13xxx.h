@@ -38,6 +38,10 @@ int mc13xxx_get_flags(struct mc13xxx *mc13xxx);
 int mc13xxx_adc_do_conversion(struct mc13xxx *mc13xxx,
 		unsigned int mode, unsigned int channel, unsigned int *sample);
 
+int mc13xxx_adc_do_conversion_ex(struct mc13xxx *mc13xxx,
+		unsigned int mode, unsigned int channel, unsigned int *sample,
+		u32 adc0mask, u32 adc0val, u32 adc1mask, u32 adc1val);
+
 #define MC13XXX_IRQ_ADCDONE	0
 #define MC13XXX_IRQ_ADCBISDONE	1
 #define MC13XXX_IRQ_TS		2
@@ -171,15 +175,23 @@ struct mc13xxx_platform_data {
 #define MC13XXX_ADC_MODE_MULT_CHAN	3
 
 #define MC13XXX_ADC0		43
+#define MC13XXX_ADC0_LICELLCON		(1 << 0)
+#define MC13XXX_ADC0_CHRGICON		(1 << 1)
+#define MC13XXX_ADC0_BATTICON		(1 << 2)
 #define MC13XXX_ADC0_ADREFEN		(1 << 10)
 #define MC13XXX_ADC0_TSMOD0		(1 << 12)
 #define MC13XXX_ADC0_TSMOD1		(1 << 13)
 #define MC13XXX_ADC0_TSMOD2		(1 << 14)
+#define MC13XXX_ADC0_CHRGRAWDIV		(1 << 15)
 #define MC13XXX_ADC0_ADINC1		(1 << 16)
 #define MC13XXX_ADC0_ADINC2		(1 << 17)
 
 #define MC13XXX_ADC0_TSMOD_MASK		(MC13XXX_ADC0_TSMOD0 | \
 					MC13XXX_ADC0_TSMOD1 | \
 					MC13XXX_ADC0_TSMOD2)
+
+#define MC13XXX_ADC1_ATO_SHIFT		11
+#define MC13XXX_ADC1_ATO_MASK		(0xff << MC13XXX_ADC1_ATO_SHIFT)
+#define MC13XXX_ADC1_ATOX		(1 << 19)
 
 #endif /* ifndef __LINUX_MFD_MC13XXX_H */

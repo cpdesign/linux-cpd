@@ -508,8 +508,9 @@ static irqreturn_t mc13xxx_handler_adcdone(int irq, void *data)
 
 #define MC13XXX_ADC_WORKING (1 << 0)
 
-int mc13xxx_adc_do_conversion(struct mc13xxx *mc13xxx, unsigned int mode,
-		unsigned int channel, unsigned int *sample)
+int mc13xxx_adc_do_conversion_ex(struct mc13xxx *mc13xxx, unsigned int mode,
+		unsigned int channel, unsigned int *sample,
+		u32 adc0mask, u32 adc0val, u32 adc1mask, u32 adc1val)
 {
 	u32 adc0, adc1, old_adc0;
 	int i, ret;
@@ -534,6 +535,16 @@ int mc13xxx_adc_do_conversion(struct mc13xxx *mc13xxx, unsigned int mode,
 
 	adc0 = MC13XXX_ADC0_ADINC1 | MC13XXX_ADC0_ADINC2;
 	adc1 = MC13XXX_ADC1_ADEN | MC13XXX_ADC1_ADTRIGIGN | MC13XXX_ADC1_ASC;
+
+	if (adc0mask) {
+		adc0 &= ~(adc0mask & ~adc0val);
+		adc0 |= (adc0mask & adc0val);
+	}
+
+	if (adc1mask) {
+		adc1 &= ~(adc1mask & ~adc1val);
+		adc1 |= (adc1mask & adc1val);
+	}
 
 	/*
 	 * For the mc13892 not in TS mode the touchscreen inputs
@@ -625,6 +636,14 @@ out:
 	mc13xxx_unlock(mc13xxx);
 
 	return ret;
+}
+EXPORT_SYMBOL_GPL(mc13xxx_adc_do_conversion_ex);
+
+int mc13xxx_adc_do_conversion(struct mc13xxx *mc13xxx, unsigned int mode,
+		unsigned int channel, unsigned int *sample)
+{
+	return mc13xxx_adc_do_conversion_ex(mc13xxx, mode, channel, sample,
+			0, 0, 0, 0);
 }
 EXPORT_SYMBOL_GPL(mc13xxx_adc_do_conversion);
 
