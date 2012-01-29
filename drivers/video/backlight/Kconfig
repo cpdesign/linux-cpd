@@ -342,6 +342,12 @@ config BACKLIGHT_AAT2870
 	  If you have a AnalogicTech AAT2870 say Y to enable the
 	  backlight driver.
 
+config BACKLIGHT_ISL22316
+	tristate "Backlight driver for ISL22316"
+	depends on I2C
+	help
+	  Say Y to enable backlight support based on isl22316 digital pot.
+
 endif # BACKLIGHT_CLASS_DEVICE
 
 endif # BACKLIGHT_LCD_SUPPORT
