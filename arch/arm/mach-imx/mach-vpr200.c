@@ -226,10 +226,21 @@ static const struct gpio_keys_platform_data
 	.nbuttons = ARRAY_SIZE(vpr200_gpio_keys_table),
 };
 
+static struct mc13892_battery_platform_data vpr200_battery = {
+	.vchrg = MC13892_BATTERY_VCHRG_4200mV,
+	.ichrg = MC13892_BATTERY_ICHRG_1200mA,
+	.plim = MC13892_BATTERY_PLIM_1200mW,
+	.battery_nominal_capacity_uAh = 10 * 1000 * 1000,
+	.eoc_battery_min_uV = 4100000,
+	.eoc_current_max_uA = 150000,
+	.cc_onec_multiplier = 2,
+};
+
 static struct mc13xxx_platform_data vpr200_pmic = {
 	.flags = MC13XXX_USE_ADC |
 		 MC13XXX_USE_TOUCHSCREEN  |
 		 MC13XXX_USE_RTC,
+	.battery = &vpr200_battery,
 };
 
 static const struct imxi2c_platform_data vpr200_i2c0_data __initconst = {
