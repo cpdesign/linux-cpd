@@ -59,6 +59,17 @@
 #define GPIO_BUTTON7	IMX_GPIO_NR(1, 11)
 #define GPIO_BUTTON8	IMX_GPIO_NR(1, 12)
 
+#define GPIO_LEDR	IMX_GPIO_NR(3, 14)
+#define GPIO_LEDG	IMX_GPIO_NR(3, 15)
+#define GPIO_LEDB	IMX_GPIO_NR(3, 30)
+
+static long vpr200_blink(int state)
+{
+	gpio_direction_output(GPIO_LEDR, !state);
+
+	return 0;
+}
+
 static const struct fb_videomode fb_modedb[] = {
 	{
 		/* 800x480 @ 60 Hz */
@@ -130,6 +141,34 @@ static const struct mxc_nand_platform_data
 	.width = 1,
 	.hw_ecc = 1,
 	.flash_bbt = 1,
+};
+
+static struct gpio_led vpr200_gpio_leds[] = {
+	[0] = {
+		.name			= "gpio-led:green:",
+		.gpio			= GPIO_LEDG,
+		.default_trigger	= "heartbeat",
+		.active_low		= 0,
+	},
+	[1] = {
+		.name			= "gpio-led:blue:",
+		.gpio			= GPIO_LEDB,
+		.default_trigger	= "mmc0",
+		.active_low		= 0,
+	},
+};
+
+static struct gpio_led_platform_data vpr200_led_pdata = {
+	.leds           = vpr200_gpio_leds,
+	.num_leds       = ARRAY_SIZE(vpr200_gpio_leds),
+};
+
+static struct platform_device vpr200_led_device = {
+	 .name   = "leds-gpio",
+	 .id     = -1,
+	 .dev    = {
+		 .platform_data  =  &vpr200_led_pdata,
+	},
 };
 
 #define VPR_KEY_DEBOUNCE	100
@@ -224,9 +263,6 @@ static iomux_v3_cfg_t vpr200_pads[] = {
 	MX35_PAD_CONTRAST__IPU_DISPB_CONTR,
 	/* LCD Enable */
 	MX35_PAD_D3_VSYNC__GPIO1_2,
-	/* USBOTG */
-	MX35_PAD_USBOTG_PWR__USB_TOP_USBOTG_PWR,
-	MX35_PAD_USBOTG_OC__USB_TOP_USBOTG_OC,
 	/* SDCARD */
 	MX35_PAD_SD1_CMD__ESDHC1_CMD,
 	MX35_PAD_SD1_CLK__ESDHC1_CLK,
@@ -247,6 +283,9 @@ static iomux_v3_cfg_t vpr200_pads[] = {
 	MX35_PAD_TX3_RX2__GPIO1_12,
 
 	MX35_PAD_USBOTG_OC__USB_TOP_USBOTG_OC,
+	/* leds */
+	MX35_PAD_USBOTG_PWR__GPIO3_14,
+	MX35_PAD_D3_HSYNC__GPIO3_30,
 	/* WDOG reset */
 	MX35_PAD_WDOG_RST__WDOG_WDOG_B,
 };
@@ -272,6 +311,7 @@ static const struct mxc_usbh_platform_data usb_host_pdata __initconst = {
 
 static struct platform_device *devices[] __initdata = {
 	&vpr200_flash,
+	&vpr200_led_device,
 };
 
 
@@ -315,6 +355,12 @@ static void __init vpr200_board_init(void)
 
 	mxc_iomux_v3_setup_multiple_pads(vpr200_pads, ARRAY_SIZE(vpr200_pads));
 
+	if (0 != gpio_request(GPIO_LEDR, "LEDR"))
+		printk(KERN_WARNING "vpr200: Couldn't get LEDR gpio\n");
+	else
+		gpio_direction_output(GPIO_LEDR, 1);
+
+	panic_blink = vpr200_blink;
 	pm_power_off = vpr200_power_off;
 
 	imx35_add_fec(NULL);
