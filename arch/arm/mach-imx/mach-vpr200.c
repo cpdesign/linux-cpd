@@ -441,8 +441,6 @@ static void __init vpr200_board_init(void)
 	imx35_add_imx2_wdt(NULL);
 	imx_add_gpio_keys(&vpr200_gpio_keys_data);
 
-	platform_add_devices(devices, ARRAY_SIZE(devices));
-
 	if (0 != gpio_request(GPIO_LCDPWR, "LCDPWR"))
 		printk(KERN_WARNING "vpr200: Couldn't get LCDPWR gpio\n");
 	else
@@ -460,6 +458,8 @@ static void __init vpr200_board_init(void)
 
 	gpio_request(GPIO_BP_RESET, "BP_RESET");
 	gpio_direction_output(GPIO_BP_RESET, 1);
+
+	platform_add_devices(devices, ARRAY_SIZE(devices));
 
 	imx35_add_imx_uart0(NULL);
 	imx35_add_imx_uart1(&vpr200_uart1_data);
