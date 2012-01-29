@@ -438,6 +438,21 @@ static struct clk nfc_clk = {
 	.disable	= clk_dummy_disable
 };
 
+#define _FIXED_CLOCK( name, rate ) \
+	static unsigned long get_rate_##name(struct clk *clk)		\
+	{								\
+		return rate;						\
+	}								\
+									\
+	static struct clk name##_clk = {				\
+		.get_rate	= get_rate_##name,			\
+		.enable		= clk_dummy_enable,			\
+		.disable	= clk_dummy_disable,			\
+	};
+
+_FIXED_CLOCK(ckih, 24000000);
+_FIXED_CLOCK(ckil, 32000);
+
 #define _REGISTER_CLOCK(d, n, c)	\
 	{				\
 		.dev_id = d,		\
@@ -503,6 +518,8 @@ static struct clk_lookup lookups[] = {
 	_REGISTER_CLOCK(NULL, "iim", iim_clk)
 	_REGISTER_CLOCK(NULL, "gpu2d", gpu2d_clk)
 	_REGISTER_CLOCK("mxc_nand.0", NULL, nfc_clk)
+	_REGISTER_CLOCK(NULL, "ckih", ckih_clk)
+	_REGISTER_CLOCK(NULL, "ckil", ckil_clk)
 };
 
 int __init mx35_clocks_init()
