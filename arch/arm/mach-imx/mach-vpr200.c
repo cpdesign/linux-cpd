@@ -36,6 +36,8 @@
 #include <linux/i2c.h>
 #include <linux/i2c/at24.h>
 #include <linux/mfd/mc13xxx.h>
+#include <linux/delay.h>
+#include <linux/clk.h>
 
 #include "devices-imx35.h"
 
@@ -245,6 +247,8 @@ static iomux_v3_cfg_t vpr200_pads[] = {
 	MX35_PAD_TX3_RX2__GPIO1_12,
 
 	MX35_PAD_USBOTG_OC__USB_TOP_USBOTG_OC,
+	/* WDOG reset */
+	MX35_PAD_WDOG_RST__WDOG_WDOG_B,
 };
 
 /* USB Device config */
@@ -270,6 +274,35 @@ static struct platform_device *devices[] __initdata = {
 	&vpr200_flash,
 };
 
+
+void vpr200_power_off(void)
+{
+	u16 reg;
+	struct clk * clk;
+	struct resource *r;
+	void __iomem *power_off_base;
+
+	pr_info("%s\n", __func__);
+	mdelay(50);
+
+	r = request_region(MX35_WDOG_BASE_ADDR, SZ_16, "vpr200_shutdown");
+	if (!r) {
+		pr_err("%s: Couldn't get wdt region for shutdown\n", __func__);
+	}
+
+	power_off_base = ioremap_nocache(MX35_WDOG_BASE_ADDR, SZ_16);
+
+	/* clock must be active in order to work */
+	clk = clk_get_sys("imx2-wdt.0", NULL);
+	if (!IS_ERR(clk))
+		clk_enable(clk);
+	else
+		pr_err("%s: couldn't get wdt clock\n", __func__);
+
+	reg = 0x0110;
+	writew(reg, power_off_base + 0x00);
+}
+
 /*
  * Board specific initialization.
  */
@@ -281,6 +314,8 @@ static void __init vpr200_board_init(void)
 			VPR200_CPU_REV, VPR200_BOARD_REV);
 
 	mxc_iomux_v3_setup_multiple_pads(vpr200_pads, ARRAY_SIZE(vpr200_pads));
+
+	pm_power_off = vpr200_power_off;
 
 	imx35_add_fec(NULL);
 	imx35_add_imx2_wdt(NULL);
