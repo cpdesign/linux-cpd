@@ -15,6 +15,7 @@
 #include <linux/platform_device.h>
 #include <linux/mutex.h>
 #include <linux/interrupt.h>
+#include <linux/delay.h>
 #include <linux/mfd/core.h>
 #include <linux/mfd/mc13xxx.h>
 
@@ -116,9 +117,12 @@
 #define MC13XXX_REVISION_FAB		(0x03 << 11)
 #define MC13XXX_REVISION_ICIDCODE	(0x3f << 13)
 
+#define MC13XXX_ADC0_ADRESET		(1 << 8)
+
 #define MC13XXX_ADC1		44
 #define MC13XXX_ADC1_ADEN		(1 << 0)
 #define MC13XXX_ADC1_RAND		(1 << 1)
+#define MC13892_ADC1_ADCCAL		(1 << 2)
 #define MC13XXX_ADC1_ADSEL		(1 << 3)
 #define MC13XXX_ADC1_ASC		(1 << 20)
 #define MC13XXX_ADC1_ADTRIGIGN		(1 << 21)
@@ -622,6 +626,32 @@ static int mc13xxx_add_subdevice(struct mc13xxx *mc13xxx, const char *format)
 	return mc13xxx_add_subdevice_pdata(mc13xxx, format, NULL, 0);
 }
 
+static int mc13xxx_adc_reset(struct mc13xxx *mc13xxx)
+{
+	int ret;
+	u32 val, mask;
+
+	val = MC13XXX_ADC0_ADRESET;
+	mask = MC13XXX_ADC0_ADRESET;
+
+	ret = mc13xxx_reg_rmw(mc13xxx, MC13XXX_ADC0, mask, val);
+
+	/* Calibrate ADC for mc13892*/
+	if (mc13xxx->ictype == MC13XXX_ID_MC13892) {
+		msleep(50);
+
+		mask = MC13XXX_ADC1_ADEN | MC13XXX_ADC1_ASC
+				| MC13892_ADC1_ADCCAL;
+		val = mask;
+		mc13xxx_reg_rmw(mc13xxx, MC13XXX_ADC1, mask, val);
+
+		msleep(5);
+		mc13xxx_reg_rmw(mc13xxx, MC13XXX_ADC1, MC13XXX_ADC1_ADEN, 0);
+	}
+
+	return ret;
+}
+
 int mc13xxx_common_init(struct mc13xxx *mc13xxx,
 		struct mc13xxx_platform_data *pdata, int irq)
 {
@@ -653,6 +683,10 @@ err_revision:
 		kfree(mc13xxx);
 		return ret;
 	}
+
+	ret = mc13xxx_adc_reset(mc13xxx);
+	if (ret)
+		dev_warn(mc13xxx->dev, "device reset failed!\n");
 
 	mc13xxx_unlock(mc13xxx);
 
