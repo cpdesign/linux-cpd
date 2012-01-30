@@ -513,6 +513,7 @@ int mc13xxx_adc_do_conversion(struct mc13xxx *mc13xxx, unsigned int mode,
 {
 	u32 adc0, adc1, old_adc0;
 	int i, ret;
+	long timeout;
 	struct mc13xxx_adcdone_data adcdone_data = {
 		.mc13xxx = mc13xxx,
 	};
@@ -566,20 +567,23 @@ int mc13xxx_adc_do_conversion(struct mc13xxx *mc13xxx, unsigned int mode,
 			mc13xxx_handler_adcdone, __func__, &adcdone_data);
 
 	mc13xxx_reg_write(mc13xxx, MC13XXX_ADC0, adc0);
-	mc13xxx_reg_write(mc13xxx, MC13XXX_ADC1, adc1);
+	ret = mc13xxx_reg_write(mc13xxx, MC13XXX_ADC1, adc1);
 
 	mc13xxx_unlock(mc13xxx);
 
-	ret = wait_for_completion_interruptible_timeout(&adcdone_data.done, HZ);
+	timeout = wait_for_completion_interruptible_timeout(&adcdone_data.done, HZ);
 
-	if (!ret)
+	if (timeout <= 0) {
+		dev_warn(mc13xxx->dev,
+				"timed out waiting for ADC completion\n");
 		ret = -ETIMEDOUT;
+	}
 
 	mc13xxx_lock(mc13xxx);
 
 	mc13xxx_irq_free(mc13xxx, MC13XXX_IRQ_ADCDONE, &adcdone_data);
 
-	if (ret > 0)
+	if (!ret)
 		for (i = 0; i < 4; ++i) {
 			ret = mc13xxx_reg_read(mc13xxx,
 					MC13XXX_ADC2, &sample[i]);
