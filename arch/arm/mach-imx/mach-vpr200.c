@@ -32,6 +32,7 @@
 #include <mach/common.h>
 #include <mach/iomux-mx35.h>
 #include <mach/irqs.h>
+#include <mach/audmux.h>
 
 #include <linux/i2c.h>
 #include <linux/i2c/at24.h>
@@ -427,6 +428,38 @@ static struct platform_device *devices[] __initdata = {
 	&vpr200_lcd_powerdev,
 };
 
+static const
+struct imx_ssi_platform_data vpr200_ssi_pdata __initconst = {
+	.flags = IMX_SSI_SYN | IMX_SSI_NET | IMX_SSI_USE_I2S_SLAVE,
+};
+
+static void mxc_init_pcm1774(void)
+{
+	struct clk *clko, *parent;
+	unsigned long rate;
+
+	clko = clk_get(NULL, "clko");
+	if (IS_ERR(clko)) {
+		pr_err("%s: Couldn't get clko\n", __func__);
+		return;
+	}
+	parent = clk_get(NULL, "ckih");
+	if (IS_ERR(parent)) {
+		pr_err("%s: Couldn't get ckih\n", __func__);
+		return;
+	}
+	clk_set_parent(clko, parent);
+	rate = clk_round_rate(clko, 12000000);
+	if (rate < 8000000 || rate > 27000000) {
+		printk(KERN_ERR "Error: pcm1774 sclk freq %d out of range!\n",
+		       (unsigned int)rate);
+		clk_put(parent);
+		clk_put(clko);
+		return;
+	}
+	clk_set_rate(clko, rate);
+	clk_enable(clko);
+}
 
 void vpr200_power_off(void)
 {
@@ -513,6 +546,23 @@ static void __init vpr200_board_init(void)
 	imx35_add_mxc_nand(&vpr200_nand_board_info);
 	imx35_add_sdhci_esdhc_imx(0, &sd1_pdata);
 
+#if defined(CONFIG_SND_SOC_VPR200_PCM1774)
+	/* SSI unit master I2S codec connected to SSI_AUD4 */
+	mxc_audmux_v2_configure_port(0,
+			MXC_AUDMUX_V2_PTCR_SYN |
+			MXC_AUDMUX_V2_PTCR_TFSDIR |
+			MXC_AUDMUX_V2_PTCR_TFSEL(3) |
+			MXC_AUDMUX_V2_PTCR_TCLKDIR |
+			MXC_AUDMUX_V2_PTCR_TCSEL(3),
+			MXC_AUDMUX_V2_PDCR_RXDSEL(3)
+	);
+	mxc_audmux_v2_configure_port(3,
+			MXC_AUDMUX_V2_PTCR_SYN,
+			MXC_AUDMUX_V2_PDCR_RXDSEL(0)
+	);
+#endif
+	imx35_add_imx_ssi(0, &vpr200_ssi_pdata);
+
 	i2c_register_board_info(0, vpr200_i2c_devices,
 			ARRAY_SIZE(vpr200_i2c_devices));
 
@@ -523,6 +573,8 @@ static void __init vpr200_board_init(void)
 	imx35_add_imx_i2c1(&vpr200_i2c0_data);
 
 	vpr200_register_backlight();
+
+	mxc_init_pcm1774();
 }
 
 static void __init vpr200_timer_init(void)
