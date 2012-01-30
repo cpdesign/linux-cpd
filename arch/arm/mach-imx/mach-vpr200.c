@@ -40,6 +40,7 @@
 #include <linux/clk.h>
 
 #include <video/platform_lcd.h>
+#include <video/isl22316_bl.h>
 
 #include "devices-imx35.h"
 
@@ -271,6 +272,31 @@ static struct i2c_board_info vpr200_bus1_devices[] = {
 	},
 };
 
+/*
+ * need to register backlight seperately, as early version have
+ * inverted wiper
+ */
+static struct isl22316_bl_platform_data isl_data = {
+	.inverted = 0,
+};
+
+static struct i2c_board_info vpr200_backlight_info = {
+		I2C_BOARD_INFO("isl22316", 0x2b),
+		.platform_data = &isl_data,
+};
+
+static int vpr200_register_backlight(void)
+{
+	if (VPR200_BOARD_REV == VPR200_BOARD_V2) {
+		pr_info("%s: Using legacy backlight settings\n", __func__);
+		isl_data.inverted = 1;
+	} else {
+		pr_info("%s: Using normal backlight settings\n", __func__);
+	}
+
+	return i2c_register_board_info(1, &vpr200_backlight_info, 1);
+}
+
 static struct imxuart_platform_data vpr200_uart1_data = {
 	.flags = IMXUART_HAVE_RTSCTS,
 };
@@ -496,6 +522,7 @@ static void __init vpr200_board_init(void)
 	imx35_add_imx_i2c0(&vpr200_i2c0_data);
 	imx35_add_imx_i2c1(&vpr200_i2c0_data);
 
+	vpr200_register_backlight();
 }
 
 static void __init vpr200_timer_init(void)
