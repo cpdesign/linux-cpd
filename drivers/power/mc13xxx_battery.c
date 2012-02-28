@@ -321,7 +321,7 @@ static int mc13xxx_read_raw_chrg_single(struct mc13xxx_battery* batt,
 	for (i = 0; i < 8; ++i)
 		chrg[i] = extract_sample(samples, i, true);
 
-	*ichrg_ret = average_samples(samples, 8);
+	*ichrg_ret = average_samples(chrg, 8);
 
 	return ret;
 }
