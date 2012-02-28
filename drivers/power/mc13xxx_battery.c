@@ -540,6 +540,7 @@ static void mc13xxx_do_wait_ms(struct mc13xxx *mc13xxx, unsigned int ms)
 static bool mc13892_do_confirm_charger_online(struct mc13xxx_battery *batt,
 		u32 *sens0)
 {
+	struct mc13892_battery_platform_data *pdata = batt->mc13892_pdata;
 	int raw_chrgc_avg;
 	int ret;
 	bool now_charger_online = true;
@@ -548,14 +549,16 @@ static bool mc13892_do_confirm_charger_online(struct mc13xxx_battery *batt,
 	mc13xxx_unlock(batt->mc13xxx);
 	ret = mc13xxx_read_raw_chrg_single(batt, &raw_chrgc_avg);
 	mc13xxx_lock(batt->mc13xxx);
+	if (ret)
+		dev_warn(batt->charger.dev,
+				"Couldn't read charge current to confirm charger online\n");
 
 	if ((ret == 0) && (raw_chrgc_avg <= 3)) {
 		mc13xxx_do_set_ichrg(batt, MC13892_BATTERY_ICHRG_0mA);
 
 		mc13xxx_do_wait_ms(batt->mc13xxx, 1000);
 
-		mc13xxx_do_set_ichrg(batt,
-				MC13892_BATTERY_ICHRG_1200mA);
+		mc13xxx_do_set_ichrg(batt, pdata->ichrg);
 
 		mc13xxx_do_wait_ms(batt->mc13xxx, 1000);
 
@@ -563,8 +566,7 @@ static bool mc13892_do_confirm_charger_online(struct mc13xxx_battery *batt,
 				MC13XXX_IRQSENS0, sens0);
 	}
 
-	if (ret == 0)
-		now_charger_online = !!(*sens0 & MC13XXX_IRQSENS0_CHGDET);
+	now_charger_online = !!(*sens0 & MC13XXX_IRQSENS0_CHGDET);
 
 	return now_charger_online;
 }
