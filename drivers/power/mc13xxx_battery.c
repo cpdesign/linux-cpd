@@ -23,6 +23,7 @@
 #include <linux/power_supply.h>
 #include <linux/math64.h>
 #include <linux/delay.h>
+#include <linux/gpio.h>
 
 #include <linux/mfd/mc13xxx.h>
 
@@ -112,6 +113,8 @@ struct mc13xxx_battery {
 	struct timespec charge_start_time;
 
 	bool battery_online;
+
+	bool shunt_enabled;
 
 	/* pmic charge state - follows bits of the same name*/
 	/* true when in constant voltage mode */
@@ -571,6 +574,52 @@ static bool mc13892_do_confirm_charger_online(struct mc13xxx_battery *batt,
 	return now_charger_online;
 }
 
+static int active_val(int val, enum mc13xxx_shunt_types type)
+{
+	return (type == MC13XXX_SHUNT_GPIO_HIGH) ? !!val : !val;
+}
+
+static int mc13xxx_update_shunt(struct mc13xxx_battery *batt)
+{
+	struct mc13892_battery_platform_data *pdata = batt->mc13892_pdata;
+	int enablestate;
+	int enable;
+
+	if (pdata->shunt_enable_type == MC13XXX_SHUNT_NONE)
+		return 0;
+
+	enablestate = batt->shunt_enabled;
+
+	if (pdata->shunt_sense_type != MC13XXX_SHUNT_NONE) {
+		int sense = active_val(gpio_get_value(pdata->shunt_sense_gpio),
+				pdata->shunt_sense_type);
+
+		if (sense != enablestate) {
+			dev_warn(batt->charger.dev,
+					"Shunt was %s but %s sensed\n",
+					enablestate ? "active" : " not active",
+					sense ? "was" : "was not");
+		}
+	}
+
+	/* cccv is low when current limiting*/
+	enable = batt->charger_online && !batt->cccv;
+
+	if (enablestate != enable) {
+		dev_dbg(batt->charger.dev, "cccv is %d, chrgc is %d\n",
+				batt->cccv, batt->chrgc);
+		dev_info(batt->charger.dev, "Shunt enable becoming %s\n",
+				enable ? "active" : "not active");
+	}
+
+	batt->shunt_enabled = enable;
+	gpio_set_value(pdata->shunt_enable_gpio,
+			active_val(batt->shunt_enabled,
+				pdata->shunt_enable_type));
+
+	return 0;
+}
+
 #define sort3(a0, a1, a2) ({						\
 		if (a0 > a1)						\
 			swap(a0, a1);					\
@@ -672,6 +721,8 @@ static int mc13xxx_battery_update(struct mc13xxx_battery *batt)
 
 	batt->cccv = !!(sens0 & MC13XXX_IRQSENS0_CCCV);
 	batt->chgcurr = !!(sens0 & MC13XXX_IRQSENS0_CHGCURR);
+
+	mc13xxx_update_shunt(batt);
 
 	if (batt->charger_online) {
 		bool is_timeout;
@@ -1022,6 +1073,19 @@ static int __devinit mc13xxx_battery_probe(struct platform_device *pdev)
 	mc13xxx_lock(batt->mc13xxx);
 	mc13xxx_do_battery_init(batt);
 	mc13xxx_unlock(batt->mc13xxx);
+
+	if (batt->mc13892_pdata->shunt_enable_type != MC13XXX_SHUNT_NONE) {
+		gpio_request(batt->mc13892_pdata->shunt_enable_gpio,
+				"mc13xxx_shunt_enable");
+		gpio_direction_output(batt->mc13892_pdata->shunt_enable_gpio,
+				active_val(0, batt->mc13892_pdata->shunt_enable_type));
+	}
+
+	if (batt->mc13892_pdata->shunt_sense_type != MC13XXX_SHUNT_NONE) {
+		gpio_request(batt->mc13892_pdata->shunt_sense_gpio,
+				"mc13xxx_shunt_sense");
+	}
+
 
 	queue_delayed_work(batt->workq, &batt->work, HZ * 3);
 

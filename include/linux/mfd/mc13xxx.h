@@ -159,6 +159,12 @@ struct mc13xxx_buttons_platform_data {
 	unsigned short b3on_key;
 };
 
+enum mc13xxx_shunt_types {
+	MC13XXX_SHUNT_NONE,
+	MC13XXX_SHUNT_GPIO_LOW,
+	MC13XXX_SHUNT_GPIO_HIGH,
+};
+
 struct mc13892_battery_platform_data {
 /* VCHRG[2:0] */
 #define MC13892_BATTERY_VCHRG_3800mV		0x0
@@ -205,6 +211,11 @@ struct mc13892_battery_platform_data {
 	/* End of charge parameters */
 	int eoc_battery_min_uV;
 	int eoc_current_max_uA;
+
+	enum mc13xxx_shunt_types shunt_enable_type;
+	enum mc13xxx_shunt_types shunt_sense_type;
+	unsigned int shunt_enable_gpio;
+	unsigned int shunt_sense_gpio;
 };
 
 struct mc13xxx_platform_data {
