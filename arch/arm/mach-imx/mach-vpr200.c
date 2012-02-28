@@ -75,6 +75,9 @@
 #define GPIO_SD_CD	IMX_GPIO_NR(3, 1)
 #define GPIO_SD_WP	IMX_GPIO_NR(3, 2)
 
+#define GPIO_SHUNT_ENABLE	IMX_GPIO_NR(2, 1)
+#define GPIO_SHUNT_SENSE	IMX_GPIO_NR(2, 3)
+
 static long vpr200_blink(int state)
 {
 	gpio_direction_output(GPIO_LEDR, !state);
@@ -236,6 +239,10 @@ static struct mc13892_battery_platform_data vpr200_battery = {
 	.eoc_battery_min_uV = 4100000,
 	.eoc_current_max_uA = 150000,
 	.cc_onec_multiplier = 2,
+	.shunt_enable_type = MC13XXX_SHUNT_GPIO_LOW,
+	.shunt_enable_gpio = GPIO_SHUNT_ENABLE,
+	.shunt_sense_type = MC13XXX_SHUNT_GPIO_LOW,
+	.shunt_sense_gpio = GPIO_SHUNT_SENSE,
 };
 
 static struct mc13xxx_platform_data vpr200_pmic = {
@@ -374,6 +381,9 @@ static iomux_v3_cfg_t vpr200_pads[] = {
 	MX35_PAD_I2C2_DAT__I2C2_SDA,
 	/* PMIC */
 	MX35_PAD_GPIO2_0__GPIO2_0,
+	MX35_PAD_SD2_CLK__GPIO2_1,
+	MX35_PAD_SD2_DATA0__GPIO2_2,
+	MX35_PAD_SD2_DATA1__GPIO2_3,
 	/* GPIO keys */
 	MX35_PAD_SCKR__GPIO1_4,
 	MX35_PAD_COMPARE__GPIO1_5,
