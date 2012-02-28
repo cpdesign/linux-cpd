@@ -12,6 +12,15 @@
  * GNU General Public License for more details.
  */
 
+enum isl22316_bl_enable_types {
+	ISL22316_BL_ENABLE_NONE,
+	ISL22316_BL_ENABLE_GPIO_LOW,
+	ISL22316_BL_ENABLE_GPIO_HIGH
+};
+
 struct isl22316_bl_platform_data {
 	int inverted;
+
+	enum isl22316_bl_enable_types enable_type;
+	unsigned int enable_gpio;
 };

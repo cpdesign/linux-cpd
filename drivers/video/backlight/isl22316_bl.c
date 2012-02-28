@@ -27,6 +27,7 @@
 #include <linux/backlight.h>
 #include <linux/leds.h>
 #include <linux/slab.h>
+#include <linux/gpio.h>
 
 #include <video/isl22316_bl.h>
 
@@ -41,6 +42,8 @@ struct isl22316_bl {
 	struct backlight_device *bl;
 	int current_brightness;
 	int inverted;
+	enum isl22316_bl_enable_types enable_type;
+	unsigned int enable_gpio;
 };
 
 static int isl22316_read(struct i2c_client *client, int reg, uint8_t *val)
@@ -62,6 +65,19 @@ static int isl22316_write(struct i2c_client *client, u8 reg, u8 val)
 	return i2c_smbus_write_byte_data(client, reg, val);
 }
 
+static void isl22316_bl_enable(struct isl22316_bl *data, int enable)
+{
+	if (data->enable_type != ISL22316_BL_ENABLE_NONE) {
+		int val;
+		if (data->enable_type == ISL22316_BL_ENABLE_GPIO_LOW)
+			val = !enable;
+		else
+			val = !!enable;
+
+		gpio_direction_output(data->enable_gpio, val);
+	}
+}
+
 static int isl22316_bl_set(struct backlight_device *bl, int brightness)
 {
 	struct isl22316_bl *data = bl_get_data(bl);
@@ -75,8 +91,11 @@ static int isl22316_bl_set(struct backlight_device *bl, int brightness)
 		setbrightness = brightness;
 	}
 
-	if (data->current_brightness != brightness)
-		ret |= isl22316_write(client, ISL22316_WR, setbrightness);
+	if (data->current_brightness != brightness) {
+		ret = isl22316_write(client, ISL22316_WR, setbrightness);
+
+		isl22316_bl_enable(data, brightness);
+	}
 
 	if (!ret)
 		data->current_brightness = brightness;
@@ -118,6 +137,8 @@ static int isl22316_bl_setup(struct backlight_device *bl)
 				ISL22316_MAX_BRIGHTNESS - reg_val;
 		else
 			data->current_brightness = reg_val;
+
+		isl22316_bl_enable(data, data->current_brightness);
 	} else {
 		dev_err(&client->dev, "Couldn't read backlight register\n");
 	}
@@ -150,6 +171,17 @@ static int __devinit isl22316_probe(struct i2c_client *client,
 		dev_info(&client->dev, "Inverted hw values: %d\n",
 				pdata->inverted);
 		data->inverted = pdata->inverted;
+
+		data->enable_type = pdata->enable_type;
+		data->enable_gpio = pdata->enable_gpio;
+
+		if (data->enable_type != ISL22316_BL_ENABLE_NONE) {
+			ret = gpio_request(data->enable_gpio, "ISL22316_BL_EN");
+			if (ret)
+				dev_err(&client->dev,
+						"Request error for gpio enable"
+						"for isl22316 backlight\n");
+		}
 	}
 
 	ret = isl22316_read(client, ISL22316_ACR, &reg_val);
