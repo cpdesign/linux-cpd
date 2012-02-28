@@ -135,9 +135,7 @@ static void vpr200_lcd_power_set(struct plat_lcd_data *pd, unsigned int power)
 {
 	if (power) {
 		gpio_direction_output(GPIO_LCDPWR, 0);
-		gpio_direction_output(GPIO_LEDPWR, 1);
 	} else {
-		gpio_direction_output(GPIO_LEDPWR, 0);
 		gpio_direction_output(GPIO_LCDPWR, 1);
 	}
 }
@@ -286,6 +284,8 @@ static struct i2c_board_info vpr200_bus1_devices[] = {
  */
 static struct isl22316_bl_platform_data isl_data = {
 	.inverted = 0,
+	.enable_type = ISL22316_BL_ENABLE_GPIO_HIGH,
+	.enable_gpio = GPIO_LEDPWR,
 };
 
 static struct i2c_board_info vpr200_backlight_info = {
@@ -364,6 +364,7 @@ static iomux_v3_cfg_t vpr200_pads[] = {
 	MX35_PAD_CONTRAST__IPU_DISPB_CONTR,
 	/* LCD Enable */
 	MX35_PAD_D3_VSYNC__GPIO1_2,
+	MX35_PAD_ATA_CS1__GPIO2_7,
 	/* SDCARD */
 	MX35_PAD_SD1_CMD__ESDHC1_CMD,
 	MX35_PAD_SD1_CLK__ESDHC1_CLK,
@@ -526,12 +527,7 @@ static void __init vpr200_board_init(void)
 	if (0 != gpio_request(GPIO_LCDPWR, "LCDPWR"))
 		printk(KERN_WARNING "vpr200: Couldn't get LCDPWR gpio\n");
 	else
-		gpio_direction_output(GPIO_LCDPWR, 0);
-
-	if (0 != gpio_request(GPIO_LEDPWR, "LEDPWR"))
-		printk(KERN_WARNING "vpr200: Couldn't get LEDPWR gpio\n");
-	else
-		gpio_direction_output(GPIO_LEDPWR, 0);
+		gpio_direction_output(GPIO_LCDPWR, 1);
 
 	if (0 != gpio_request(GPIO_PMIC_INT, "PMIC_INT"))
 		printk(KERN_WARNING "vpr200: Couldn't get PMIC_INT gpio\n");
@@ -540,15 +536,15 @@ static void __init vpr200_board_init(void)
 
 	gpio_request(GPIO_BP_RESET, "BP_RESET");
 	gpio_direction_output(GPIO_BP_RESET, 1);
-
-	platform_add_devices(devices, ARRAY_SIZE(devices));
-
+	
 	imx35_add_imx_uart0(NULL);
 	imx35_add_imx_uart1(&vpr200_uart1_data);
 	imx35_add_imx_uart2(NULL);
 
 	imx35_add_ipu_core(&mx3_ipu_data);
 	imx35_add_mx3_sdc_fb(&mx3fb_pdata);
+
+	platform_add_devices(devices, ARRAY_SIZE(devices));
 
 	imx35_add_fsl_usb2_udc(&otg_device_pdata);
 	imx35_add_mxc_ehci_hs(&usb_host_pdata);
