@@ -571,34 +571,59 @@ static bool mc13892_do_confirm_charger_online(struct mc13xxx_battery *batt,
 	return now_charger_online;
 }
 
+#define sort3(a0, a1, a2) ({						\
+		if (a0 > a1)						\
+			swap(a0, a1);					\
+		if (a1 > a2)						\
+			swap(a1, a2);					\
+		if (a0 > a1)						\
+			swap(a0, a1);					\
+		})
+
 static int mc13xxx_battery_update(struct mc13xxx_battery *batt)
 {
-	int ret;
+	int ret, ii;
 	u32 sens0, sens1;
 	u32 chrg_fault;
 	bool now_charger_online;
 	bool now_battery_online;
 	struct timespec timenow;
 
-	int battv = 0, battc = 0;
+	int battv[3] = {0, 0, 0};
+	int battc[3] = {0, 0, 0};
 
 	/* get battery current and voltage before getting the lock */
 	ret = mc13xxx_update_readings(batt, 0);
 	if (ret)
 		return ret;
 
-	ret = mc13xxx_read_batt_single(batt, &battv, &battc);
-	if (ret)
-		return ret;
+	/*
+	 * because the battv and battc values are more critical take the
+	 * median of 3 readings.
+	 */
+	for (ii = 0; ii < 3; ++ii) {
+		ret = mc13xxx_read_batt_single(batt, &battv[ii], &battc[ii]);
+		if (ret) {
+			dev_err(batt->battery.dev,
+				"couldn't read battery voltage and current\n");
+			return ret;
+		}
+	}
+
+	sort3(battv[0], battv[1], battv[2]);
+	sort3(battc[0], battc[1], battc[2]);
+
+	batt->battv = battv[1];
+	batt->battc = battc[1];
 
 	mc13xxx_lock(batt->mc13xxx);
 	ret = mc13xxx_reg_read(batt->mc13xxx, MC13XXX_IRQSENS0, &sens0);
 	if (ret)
-		goto out;
+		goto out_unlock;
 
 	ret = mc13xxx_reg_read(batt->mc13xxx, MC13XXX_IRQSENS1, &sens1);
 	if (ret)
-		goto out;
+		goto out_unlock;
 
 	now_charger_online = !!(sens0 & MC13XXX_IRQSENS0_CHGDET);
 
@@ -708,7 +733,8 @@ static int mc13xxx_battery_update(struct mc13xxx_battery *batt)
 		 * power limiting.
 		 */
 		if (!is_powerlimit && batt->cccv
-				&& (battv > 4100000) && (abs(battc) < 150000)) {
+				&& (batt->battv > 4100000)
+				&& (abs(batt->battc) < 150000)) {
 
 			batt->full_count++;
 			if (batt->full_count > 8) {
@@ -761,7 +787,7 @@ static int mc13xxx_battery_update(struct mc13xxx_battery *batt)
 	power_supply_changed(&batt->battery);
 	power_supply_changed(&batt->charger);
 
- out:
+ out_unlock:
 	mc13xxx_unlock(batt->mc13xxx);
 	return ret;
 }
