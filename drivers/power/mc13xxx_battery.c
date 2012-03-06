@@ -785,7 +785,7 @@ static int mc13xxx_battery_update(struct mc13xxx_battery *batt)
 		 */
 		if (!is_powerlimit && batt->cccv
 				&& (batt->battv > 4100000)
-				&& (abs(batt->battc) < 150000)) {
+				&& (abs(batt->battc) < 200000)) {
 
 			batt->full_count++;
 			if (batt->full_count > 8) {
