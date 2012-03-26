@@ -26,16 +26,16 @@
 #include <linux/input.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
-#include <linux/mfd/mc13783.h>
+#include <linux/mfd/mc13xxx.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
 
-struct mc13783_pwrb {
+struct mc13xxx_pwrb {
 	struct input_dev *pwr;
-	struct mc13xxx *mc13783;
-#define MC13783_PWRB_B1_POL_INVERT	(1 << 0)
-#define MC13783_PWRB_B2_POL_INVERT	(1 << 1)
-#define MC13783_PWRB_B3_POL_INVERT	(1 << 2)
+	struct mc13xxx *mc13xxx;
+#define MC13XXX_PWRB_B1_POL_INVERT	(1 << 0)
+#define MC13XXX_PWRB_B2_POL_INVERT	(1 << 1)
+#define MC13XXX_PWRB_B3_POL_INVERT	(1 << 2)
 	int flags;
 	unsigned short keymap[3];
 
@@ -54,13 +54,13 @@ struct mc13783_pwrb {
 #define MC13892_IRQSENSE1_PWRON2_SHIFT		4
 #define MC13892_IRQSENSE1_PWRON3_SHIFT		2
 
-#define MC13783_REG_POWER_CONTROL_2		15
-#define MC13783_POWER_CONTROL_2_ON1BDBNC	4
-#define MC13783_POWER_CONTROL_2_ON2BDBNC	6
-#define MC13783_POWER_CONTROL_2_ON3BDBNC	8
-#define MC13783_POWER_CONTROL_2_ON1BRSTEN	(1 << 1)
-#define MC13783_POWER_CONTROL_2_ON2BRSTEN	(1 << 2)
-#define MC13783_POWER_CONTROL_2_ON3BRSTEN	(1 << 3)
+#define MC13XXX_REG_POWER_CONTROL_2		15
+#define MC13XXX_POWER_CONTROL_2_ON1BDBNC	4
+#define MC13XXX_POWER_CONTROL_2_ON2BDBNC	6
+#define MC13XXX_POWER_CONTROL_2_ON3BDBNC	8
+#define MC13XXX_POWER_CONTROL_2_ON1BRSTEN	(1 << 1)
+#define MC13XXX_POWER_CONTROL_2_ON2BRSTEN	(1 << 2)
+#define MC13XXX_POWER_CONTROL_2_ON3BRSTEN	(1 << 3)
 
 static inline int shift_to_irq(int shift)
 {
@@ -74,27 +74,27 @@ static inline int shift_to_mask(int shift)
 
 static irqreturn_t button_irq(int irq, void *_priv)
 {
-	struct mc13783_pwrb *priv = _priv;
+	struct mc13xxx_pwrb *priv = _priv;
 	int val;
 
-	mc13xxx_irq_ack(priv->mc13783, irq);
-	mc13xxx_reg_read(priv->mc13783, MC13XXX_REG_INTERRUPT_SENSE_1, &val);
+	mc13xxx_irq_ack(priv->mc13xxx, irq);
+	mc13xxx_reg_read(priv->mc13xxx, MC13XXX_REG_INTERRUPT_SENSE_1, &val);
 
 	if (irq == shift_to_irq(priv->btn1_shift)) {
 		val = val & shift_to_mask(priv->btn1_shift) ? 1 : 0;
-		if (priv->flags & MC13783_PWRB_B1_POL_INVERT)
+		if (priv->flags & MC13XXX_PWRB_B1_POL_INVERT)
 			val ^= 1;
 		input_report_key(priv->pwr, priv->keymap[0], val);
 	}
 	else if (irq == shift_to_irq(priv->btn2_shift)) {
 		val = val & shift_to_mask(priv->btn2_shift) ? 1 : 0;
-		if (priv->flags & MC13783_PWRB_B2_POL_INVERT)
+		if (priv->flags & MC13XXX_PWRB_B2_POL_INVERT)
 			val ^= 1;
 		input_report_key(priv->pwr, priv->keymap[1], val);
 	}
 	else if (irq == shift_to_irq(priv->btn3_shift)) {
 		val = val & shift_to_mask(priv->btn3_shift) ? 1 : 0;
-		if (priv->flags & MC13783_PWRB_B3_POL_INVERT)
+		if (priv->flags & MC13XXX_PWRB_B3_POL_INVERT)
 			val ^= 1;
 		input_report_key(priv->pwr, priv->keymap[2], val);
 	}
@@ -107,12 +107,12 @@ static irqreturn_t button_irq(int irq, void *_priv)
 #define DRIVERID_MC13783	0
 #define DRIVERID_MC13892	1
 
-static int __devinit mc13783_pwrbutton_probe(struct platform_device *pdev)
+static int __devinit mc13xxx_pwrbutton_probe(struct platform_device *pdev)
 {
 	const struct mc13xxx_buttons_platform_data *pdata;
-	struct mc13xxx *mc13783 = dev_get_drvdata(pdev->dev.parent);
+	struct mc13xxx *mc13xxx = dev_get_drvdata(pdev->dev.parent);
 	struct input_dev *pwr;
-	struct mc13783_pwrb *priv;
+	struct mc13xxx_pwrb *priv;
 	const struct platform_device_id *devid;
 	int err = 0;
 	int reg = 0;
@@ -150,14 +150,14 @@ static int __devinit mc13783_pwrbutton_probe(struct platform_device *pdev)
 		goto free_input_dev;
 	}
 
-	reg |= (pdata->b1on_flags & 0x3) << MC13783_POWER_CONTROL_2_ON1BDBNC;
-	reg |= (pdata->b2on_flags & 0x3) << MC13783_POWER_CONTROL_2_ON2BDBNC;
-	reg |= (pdata->b3on_flags & 0x3) << MC13783_POWER_CONTROL_2_ON3BDBNC;
+	reg |= (pdata->b1on_flags & 0x3) << MC13XXX_POWER_CONTROL_2_ON1BDBNC;
+	reg |= (pdata->b2on_flags & 0x3) << MC13XXX_POWER_CONTROL_2_ON2BDBNC;
+	reg |= (pdata->b3on_flags & 0x3) << MC13XXX_POWER_CONTROL_2_ON3BDBNC;
 
 	priv->pwr = pwr;
-	priv->mc13783 = mc13783;
+	priv->mc13xxx = mc13xxx;
 
-	mc13xxx_lock(mc13783);
+	mc13xxx_lock(mc13xxx);
 
 	if (pdata->b1on_flags & MC13783_BUTTON_ENABLE) {
 		priv->keymap[0] = pdata->b1on_key;
@@ -165,12 +165,12 @@ static int __devinit mc13783_pwrbutton_probe(struct platform_device *pdev)
 			__set_bit(pdata->b1on_key, pwr->keybit);
 
 		if (pdata->b1on_flags & MC13783_BUTTON_POL_INVERT)
-			priv->flags |= MC13783_PWRB_B1_POL_INVERT;
+			priv->flags |= MC13XXX_PWRB_B1_POL_INVERT;
 
 		if (pdata->b1on_flags & MC13783_BUTTON_RESET_EN)
-			reg |= MC13783_POWER_CONTROL_2_ON1BRSTEN;
+			reg |= MC13XXX_POWER_CONTROL_2_ON1BRSTEN;
 
-		err = mc13xxx_irq_request(mc13783,
+		err = mc13xxx_irq_request(mc13xxx,
 					  shift_to_irq(priv->btn1_shift),
 					  button_irq, "b1on", priv);
 		if (err) {
@@ -185,12 +185,12 @@ static int __devinit mc13783_pwrbutton_probe(struct platform_device *pdev)
 			__set_bit(pdata->b2on_key, pwr->keybit);
 
 		if (pdata->b2on_flags & MC13783_BUTTON_POL_INVERT)
-			priv->flags |= MC13783_PWRB_B2_POL_INVERT;
+			priv->flags |= MC13XXX_PWRB_B2_POL_INVERT;
 
 		if (pdata->b2on_flags & MC13783_BUTTON_RESET_EN)
-			reg |= MC13783_POWER_CONTROL_2_ON2BRSTEN;
+			reg |= MC13XXX_POWER_CONTROL_2_ON2BRSTEN;
 
-		err = mc13xxx_irq_request(mc13783,
+		err = mc13xxx_irq_request(mc13xxx,
 					  shift_to_irq(priv->btn2_shift),
 					  button_irq, "b2on", priv);
 		if (err) {
@@ -205,12 +205,12 @@ static int __devinit mc13783_pwrbutton_probe(struct platform_device *pdev)
 			__set_bit(pdata->b3on_key, pwr->keybit);
 
 		if (pdata->b3on_flags & MC13783_BUTTON_POL_INVERT)
-			priv->flags |= MC13783_PWRB_B3_POL_INVERT;
+			priv->flags |= MC13XXX_PWRB_B3_POL_INVERT;
 
 		if (pdata->b3on_flags & MC13783_BUTTON_RESET_EN)
-			reg |= MC13783_POWER_CONTROL_2_ON3BRSTEN;
+			reg |= MC13XXX_POWER_CONTROL_2_ON3BRSTEN;
 
-		err = mc13xxx_irq_request(mc13783,
+		err = mc13xxx_irq_request(mc13xxx,
 					  shift_to_irq(priv->btn3_shift),
 					  button_irq, "b3on", priv);
 		if (err) {
@@ -219,12 +219,12 @@ static int __devinit mc13783_pwrbutton_probe(struct platform_device *pdev)
 		}
 	}
 
-	mc13xxx_reg_rmw(mc13783, MC13783_REG_POWER_CONTROL_2, 0x3FE, reg);
+	mc13xxx_reg_rmw(mc13xxx, MC13XXX_REG_POWER_CONTROL_2, 0x3FE, reg);
 
-	mc13xxx_unlock(mc13783);
+	mc13xxx_unlock(mc13xxx);
 
-	pwr->name = "mc13783_pwrbutton";
-	pwr->phys = "mc13783_pwrbutton/input0";
+	pwr->name = "mc13xxx_pwrbutton";
+	pwr->phys = "mc13xxx_pwrbutton/input0";
 	pwr->dev.parent = &pdev->dev;
 
 	pwr->keycode = priv->keymap;
@@ -243,21 +243,21 @@ static int __devinit mc13783_pwrbutton_probe(struct platform_device *pdev)
 	return 0;
 
 free_irq:
-	mc13xxx_lock(mc13783);
+	mc13xxx_lock(mc13xxx);
 
 	if (pdata->b3on_flags & MC13783_BUTTON_ENABLE)
-		mc13xxx_irq_free(mc13783, shift_to_irq(priv->btn3_shift), priv);
+		mc13xxx_irq_free(mc13xxx, shift_to_irq(priv->btn3_shift), priv);
 
 free_irq_b2:
 	if (pdata->b2on_flags & MC13783_BUTTON_ENABLE)
-		mc13xxx_irq_free(mc13783, shift_to_irq(priv->btn2_shift), priv);
+		mc13xxx_irq_free(mc13xxx, shift_to_irq(priv->btn2_shift), priv);
 
 free_irq_b1:
 	if (pdata->b1on_flags & MC13783_BUTTON_ENABLE)
-		mc13xxx_irq_free(mc13783, shift_to_irq(priv->btn1_shift), priv);
+		mc13xxx_irq_free(mc13xxx, shift_to_irq(priv->btn1_shift), priv);
 
 free_priv:
-	mc13xxx_unlock(mc13783);
+	mc13xxx_unlock(mc13xxx);
 	kfree(priv);
 
 free_input_dev:
@@ -266,26 +266,26 @@ free_input_dev:
 	return err;
 }
 
-static int __devexit mc13783_pwrbutton_remove(struct platform_device *pdev)
+static int __devexit mc13xxx_pwrbutton_remove(struct platform_device *pdev)
 {
-	struct mc13783_pwrb *priv = platform_get_drvdata(pdev);
+	struct mc13xxx_pwrb *priv = platform_get_drvdata(pdev);
 	const struct mc13xxx_buttons_platform_data *pdata;
 
 	pdata = dev_get_platdata(&pdev->dev);
 
-	mc13xxx_lock(priv->mc13783);
+	mc13xxx_lock(priv->mc13xxx);
 
 	if (pdata->b3on_flags & MC13783_BUTTON_ENABLE)
-		mc13xxx_irq_free(priv->mc13783,
+		mc13xxx_irq_free(priv->mc13xxx,
 				shift_to_irq(priv->btn3_shift), priv);
 	if (pdata->b2on_flags & MC13783_BUTTON_ENABLE)
-		mc13xxx_irq_free(priv->mc13783,
+		mc13xxx_irq_free(priv->mc13xxx,
 				shift_to_irq(priv->btn2_shift), priv);
 	if (pdata->b1on_flags & MC13783_BUTTON_ENABLE)
-		mc13xxx_irq_free(priv->mc13783,
+		mc13xxx_irq_free(priv->mc13xxx,
 				shift_to_irq(priv->btn1_shift), priv);
 
-	mc13xxx_unlock(priv->mc13783);
+	mc13xxx_unlock(priv->mc13xxx);
 
 	input_unregister_device(priv->pwr);
 	kfree(priv);
@@ -305,29 +305,29 @@ const struct platform_device_id mc13xxx_pwrbutton_idtable[] = {
 	{ }
 };
 
-struct platform_driver mc13783_pwrbutton_driver = {
+struct platform_driver mc13xxx_pwrbutton_driver = {
 	.id_table	= mc13xxx_pwrbutton_idtable,
-	.remove		= __devexit_p(mc13783_pwrbutton_remove),
+	.remove		= __devexit_p(mc13xxx_pwrbutton_remove),
 	.driver		= {
-		.name	= "mc13783-pwrbutton",
+		.name	= "mc13xxx-pwrbutton",
 		.owner	= THIS_MODULE,
 	},
 };
 
-static int __init mc13783_pwrbutton_init(void)
+static int __init mc13xxx_pwrbutton_init(void)
 {
-	return platform_driver_probe(&mc13783_pwrbutton_driver,
-			&mc13783_pwrbutton_probe);
+	return platform_driver_probe(&mc13xxx_pwrbutton_driver,
+			&mc13xxx_pwrbutton_probe);
 }
-module_init(mc13783_pwrbutton_init);
+module_init(mc13xxx_pwrbutton_init);
 
-static void __exit mc13783_pwrbutton_exit(void)
+static void __exit mc13xxx_pwrbutton_exit(void)
 {
-	platform_driver_unregister(&mc13783_pwrbutton_driver);
+	platform_driver_unregister(&mc13xxx_pwrbutton_driver);
 }
-module_exit(mc13783_pwrbutton_exit);
+module_exit(mc13xxx_pwrbutton_exit);
 
-MODULE_ALIAS("platform:mc13783-pwrbutton");
-MODULE_DESCRIPTION("MC13783 Power Button");
+MODULE_ALIAS("platform:mc13xxx-pwrbutton");
+MODULE_DESCRIPTION("MC13xxx Power Button");
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Philippe Retornaz");
