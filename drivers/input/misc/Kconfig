@@ -133,14 +133,10 @@ config INPUT_MAX8925_ONKEY
 
 	  To compile this driver as a module, choose M here: the module
 	  will be called max8925_onkey.
-
-config INPUT_MC13783_PWRBUTTON
-	tristate
 	
 config INPUT_MC13XXX_PWRBUTTON
 	tristate "MC13xxx ON buttons"
 	depends on MFD_MC13XXX
-	default INPUT_MC13783_PWRBUTTON
 	help
 	  Support the ON buttons of MC13783 or MC13892 PMICs as an input device
 	  reporting power button status.
