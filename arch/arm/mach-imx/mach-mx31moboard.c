@@ -270,8 +270,8 @@ static struct mc13xxx_leds_platform_data moboard_leds = {
 };
 
 static struct mc13xxx_buttons_platform_data moboard_buttons = {
-	.b1on_flags = MC13783_BUTTON_DBNC_750MS | MC13783_BUTTON_ENABLE |
-			MC13783_BUTTON_POL_INVERT,
+	.b1on_flags = MC13XXX_BUTTON_DBNC_750MS | MC13XXX_BUTTON_ENABLE |
+			MC13XXX_BUTTON_POL_INVERT,
 	.b1on_key = KEY_POWER,
 };
 

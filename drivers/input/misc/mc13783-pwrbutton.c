@@ -159,15 +159,15 @@ static int __devinit mc13xxx_pwrbutton_probe(struct platform_device *pdev)
 
 	mc13xxx_lock(mc13xxx);
 
-	if (pdata->b1on_flags & MC13783_BUTTON_ENABLE) {
+	if (pdata->b1on_flags & MC13XXX_BUTTON_ENABLE) {
 		priv->keymap[0] = pdata->b1on_key;
 		if (pdata->b1on_key != KEY_RESERVED)
 			__set_bit(pdata->b1on_key, pwr->keybit);
 
-		if (pdata->b1on_flags & MC13783_BUTTON_POL_INVERT)
+		if (pdata->b1on_flags & MC13XXX_BUTTON_POL_INVERT)
 			priv->flags |= MC13XXX_PWRB_B1_POL_INVERT;
 
-		if (pdata->b1on_flags & MC13783_BUTTON_RESET_EN)
+		if (pdata->b1on_flags & MC13XXX_BUTTON_RESET_EN)
 			reg |= MC13XXX_POWER_CONTROL_2_ON1BRSTEN;
 
 		err = mc13xxx_irq_request(mc13xxx,
@@ -179,15 +179,15 @@ static int __devinit mc13xxx_pwrbutton_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (pdata->b2on_flags & MC13783_BUTTON_ENABLE) {
+	if (pdata->b2on_flags & MC13XXX_BUTTON_ENABLE) {
 		priv->keymap[1] = pdata->b2on_key;
 		if (pdata->b2on_key != KEY_RESERVED)
 			__set_bit(pdata->b2on_key, pwr->keybit);
 
-		if (pdata->b2on_flags & MC13783_BUTTON_POL_INVERT)
+		if (pdata->b2on_flags & MC13XXX_BUTTON_POL_INVERT)
 			priv->flags |= MC13XXX_PWRB_B2_POL_INVERT;
 
-		if (pdata->b2on_flags & MC13783_BUTTON_RESET_EN)
+		if (pdata->b2on_flags & MC13XXX_BUTTON_RESET_EN)
 			reg |= MC13XXX_POWER_CONTROL_2_ON2BRSTEN;
 
 		err = mc13xxx_irq_request(mc13xxx,
@@ -199,15 +199,15 @@ static int __devinit mc13xxx_pwrbutton_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (pdata->b3on_flags & MC13783_BUTTON_ENABLE) {
+	if (pdata->b3on_flags & MC13XXX_BUTTON_ENABLE) {
 		priv->keymap[2] = pdata->b3on_key;
 		if (pdata->b3on_key != KEY_RESERVED)
 			__set_bit(pdata->b3on_key, pwr->keybit);
 
-		if (pdata->b3on_flags & MC13783_BUTTON_POL_INVERT)
+		if (pdata->b3on_flags & MC13XXX_BUTTON_POL_INVERT)
 			priv->flags |= MC13XXX_PWRB_B3_POL_INVERT;
 
-		if (pdata->b3on_flags & MC13783_BUTTON_RESET_EN)
+		if (pdata->b3on_flags & MC13XXX_BUTTON_RESET_EN)
 			reg |= MC13XXX_POWER_CONTROL_2_ON3BRSTEN;
 
 		err = mc13xxx_irq_request(mc13xxx,
@@ -245,15 +245,15 @@ static int __devinit mc13xxx_pwrbutton_probe(struct platform_device *pdev)
 free_irq:
 	mc13xxx_lock(mc13xxx);
 
-	if (pdata->b3on_flags & MC13783_BUTTON_ENABLE)
+	if (pdata->b3on_flags & MC13XXX_BUTTON_ENABLE)
 		mc13xxx_irq_free(mc13xxx, shift_to_irq(priv->btn3_shift), priv);
 
 free_irq_b2:
-	if (pdata->b2on_flags & MC13783_BUTTON_ENABLE)
+	if (pdata->b2on_flags & MC13XXX_BUTTON_ENABLE)
 		mc13xxx_irq_free(mc13xxx, shift_to_irq(priv->btn2_shift), priv);
 
 free_irq_b1:
-	if (pdata->b1on_flags & MC13783_BUTTON_ENABLE)
+	if (pdata->b1on_flags & MC13XXX_BUTTON_ENABLE)
 		mc13xxx_irq_free(mc13xxx, shift_to_irq(priv->btn1_shift), priv);
 
 free_priv:
@@ -275,13 +275,13 @@ static int __devexit mc13xxx_pwrbutton_remove(struct platform_device *pdev)
 
 	mc13xxx_lock(priv->mc13xxx);
 
-	if (pdata->b3on_flags & MC13783_BUTTON_ENABLE)
+	if (pdata->b3on_flags & MC13XXX_BUTTON_ENABLE)
 		mc13xxx_irq_free(priv->mc13xxx,
 				shift_to_irq(priv->btn3_shift), priv);
-	if (pdata->b2on_flags & MC13783_BUTTON_ENABLE)
+	if (pdata->b2on_flags & MC13XXX_BUTTON_ENABLE)
 		mc13xxx_irq_free(priv->mc13xxx,
 				shift_to_irq(priv->btn2_shift), priv);
-	if (pdata->b1on_flags & MC13783_BUTTON_ENABLE)
+	if (pdata->b1on_flags & MC13XXX_BUTTON_ENABLE)
 		mc13xxx_irq_free(priv->mc13xxx,
 				shift_to_irq(priv->btn1_shift), priv);
 
