@@ -6,7 +6,6 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-#define DEBUG
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/init.h>
@@ -342,7 +341,6 @@ static int pcm1774_set_dai_fmt(struct snd_soc_dai *codec_dai, unsigned int fmt)
 	u8 mstr = 0;
 	u8 pfm = 0;
 
-	pr_info("%s: fmt=%08x\n", __func__, fmt);
 	pcm1774->master = 0;
 	
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
@@ -392,8 +390,6 @@ static int pcm1774_set_dai_fmt(struct snd_soc_dai *codec_dai, unsigned int fmt)
 	default:
 		return -EINVAL;
 	}
-
-	pr_info("%s pfm: %d\n",__func__, pfm);
 
 	regsample = snd_soc_read(codec, PCM1774_DAC_SAMPLE);
 	regsample &= (~(0x03)) << 4;
@@ -531,7 +527,6 @@ static int pcm1774_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = dai->codec;
 	struct pcm1774_priv *pcm1774 = snd_soc_codec_get_drvdata(codec);
 	int channels = params_channels(params);
-	int blah = 0;
 
 	if (substream == pcm1774->slave_substream) {
 		pr_info("%s ignoring params for slave substream\n", __func__);
@@ -541,11 +536,6 @@ static int pcm1774_pcm_hw_params(struct snd_pcm_substream *substream,
 	pr_info("%s channels=%d, params_f: %d\n", __func__, channels, params_format(params));
 	pr_info("%s params_rate: %d\n", __func__, params_rate(params));
 	pr_info("%s sysclk: %d\n", __func__, pcm1774->sysclk);
-
-	blah = pcm1774->sysclk /params_rate(params);
-
-	pr_info("blah is %d\n",blah);
-
 
 	snd_soc_write(codec, PCM1774_CLK_RATE, 0x2 << 4);
 	snd_soc_write(codec, PCM1774_SYS_RESET, 0x3);
@@ -560,7 +550,6 @@ static int pcm1774_pcm_hw_params(struct snd_pcm_substream *substream,
 static int pcm1774_set_bias_level(struct snd_soc_codec *codec,
 				   enum snd_soc_bias_level level)
 {
-	pr_info("dapm level %d\n", level);
 	switch (level) {
 	case SND_SOC_BIAS_ON:		/* full On */
 		break;
@@ -593,7 +582,7 @@ static int pcm1774_set_bias_level(struct snd_soc_codec *codec,
 		      SNDRV_PCM_RATE_48000 |\
 		      SNDRV_PCM_RATE_96000)
 
-//todo: revoew
+//todo: review
 #if 0
 #define PCM1774_FORMATS (SNDRV_PCM_FMTBIT_S16_LE |\
 			SNDRV_PCM_FMTBIT_S20_3LE |\
@@ -673,8 +662,6 @@ static int pcm1774_probe(struct snd_soc_codec *codec)
 	snd_soc_write(codec, PCM1774_AMIX_SELECT, 0x11 );
 	snd_soc_write(codec, PCM1774_DAC_PWR, 0xeC);
 
-	pr_info("%s\n", __func__);
-
 	return 0;
 }
 
@@ -720,20 +707,16 @@ static __devinit int pcm1774_i2c_probe(struct i2c_client *client,
 	struct pcm1774_priv *pcm1774;
 	int ret = 0;
 
-	pr_info("%s\n", __func__);
-
 	pcm1774 = kzalloc(sizeof(struct pcm1774_priv), GFP_KERNEL);
 	if (pcm1774 == NULL) {
 		dev_err(&client->dev, "Couldn't alloc for pcm1774\n");
 		return -ENOMEM;
 	}
 
-	pr_info("set client data %s\n", __func__);
 	i2c_set_clientdata(client, pcm1774);
 	pcm1774->control_data = client;
 	pcm1774->control_type = SND_SOC_I2C;
 
-	pr_info("register client %s %p\n", __func__, &client->dev);
 	ret = snd_soc_register_codec(&client->dev,
 			&soc_codec_dev_pcm1774, &pcm1774_dai, 1);
 
