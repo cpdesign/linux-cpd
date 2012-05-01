@@ -241,6 +241,7 @@ static int mc13xxx_do_restart_charging(struct mc13xxx_battery *batt)
 	val |= MC13XXX_CHARGER0_TREN;
 	val |= MC13XXX_CHARGER0_CHRGRESTART;
 	val |= MC13XXX_CHARGER0_THCHKB;
+	val |= MC13XXX_CHARGER0_PLIMDIS;
 
 	ret = mc13xxx_reg_write(batt->mc13xxx, MC13XXX_CHARGER0, val);
 
