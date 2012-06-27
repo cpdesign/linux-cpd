@@ -972,6 +972,15 @@ static int mc13xxx_battery_get_property(struct power_supply *ps,
 	case POWER_SUPPLY_PROP_CAPACITY_LEVEL:
 		val->intval = batt->batt_capacity_level;
 		break;
+	case POWER_SUPPLY_PROP_CHARGE_FULL:
+	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
+		val->intval =
+			batt->mc13892_pdata->battery_nominal_capacity_uAh;
+		break;
+	case POWER_SUPPLY_PROP_CHARGE_EMPTY:
+	case POWER_SUPPLY_PROP_CHARGE_EMPTY_DESIGN:
+		val->intval = 0;
+		break;
 	default:
 		return -EINVAL;
 	}
@@ -987,6 +996,10 @@ static enum power_supply_property mc13xxx_battery_props[] = {
 	POWER_SUPPLY_PROP_POWER_NOW,
 	POWER_SUPPLY_PROP_CHARGE_NOW,
 	POWER_SUPPLY_PROP_CHARGE_COUNTER,
+	POWER_SUPPLY_PROP_CHARGE_FULL,
+	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
+	POWER_SUPPLY_PROP_CHARGE_EMPTY,
+	POWER_SUPPLY_PROP_CHARGE_EMPTY_DESIGN,
 	POWER_SUPPLY_PROP_CAPACITY_LEVEL,
 };
 
