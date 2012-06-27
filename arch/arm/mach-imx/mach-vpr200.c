@@ -238,7 +238,7 @@ static struct mc13892_battery_platform_data vpr200_battery = {
 	.vchrg = MC13892_BATTERY_VCHRG_4200mV,
 	.ichrg = MC13892_BATTERY_ICHRG_1200mA,
 	.plim = MC13892_BATTERY_PLIM_1200mW,
-	.battery_nominal_capacity_uAh = 10 * 1000 * 1000,
+	.battery_nominal_capacity_uAh = 8 * 1000 * 1000,
 	.eoc_battery_min_uV = 4100000,
 	.eoc_current_max_uA = 150000,
 	.cc_onec_multiplier = 2,
@@ -247,6 +247,23 @@ static struct mc13892_battery_platform_data vpr200_battery = {
 	.shunt_sense_type = MC13XXX_SHUNT_GPIO_LOW,
 	.shunt_sense_gpio = GPIO_SHUNT_SENSE,
 };
+
+int __init parse_battery_uAh(char *arg)
+{
+	int cap;
+
+	if (!arg)
+		return 0;
+
+	kstrtoint(arg, 0, &cap);
+
+	if (cap)
+		vpr200_battery.battery_nominal_capacity_uAh = cap;
+
+	return 0;
+}
+
+early_param("vpr200_battery.nominal_uAh", parse_battery_uAh);
 
 static struct mc13xxx_platform_data vpr200_pmic = {
 	.flags = MC13XXX_USE_ADC |
