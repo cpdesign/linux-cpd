@@ -240,7 +240,7 @@ static struct mc13892_battery_platform_data vpr200_battery = {
 	.plim = MC13892_BATTERY_PLIM_1200mW,
 	.battery_nominal_capacity_uAh = 8 * 1000 * 1000,
 	.eoc_battery_min_uV = 4100000,
-	.eoc_current_max_uA = 150000,
+	.eoc_current_max_uA = 250000,
 	.cc_onec_multiplier = 2,
 	.shunt_enable_type = MC13XXX_SHUNT_GPIO_LOW,
 	.shunt_enable_gpio = GPIO_SHUNT_ENABLE,
@@ -545,6 +545,7 @@ static void __init vpr200_board_init(void)
 
 	imx35_add_fec(NULL);
 	imx35_add_imx2_wdt(NULL);
+
 	imx_add_gpio_keys(&vpr200_gpio_keys_data);
 
 	if (0 != gpio_request(GPIO_LCDPWR, "LCDPWR"))
@@ -559,7 +560,7 @@ static void __init vpr200_board_init(void)
 
 	gpio_request(GPIO_BP_RESET, "BP_RESET");
 	gpio_direction_output(GPIO_BP_RESET, 1);
-	
+
 	imx35_add_imx_uart0(NULL);
 	imx35_add_imx_uart1(&vpr200_uart1_data);
 	imx35_add_imx_uart2(NULL);
