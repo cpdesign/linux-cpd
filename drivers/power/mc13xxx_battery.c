@@ -603,9 +603,8 @@ static int mc13xxx_update_shunt(struct mc13xxx_battery *batt)
 		}
 	}
 
-	/* cccv is low when current limiting*/
-	//enable = batt->charger_online && !batt->cccv;
-	enable = 1;
+	/* always enable shunt when charger connected */
+	enable = batt->charger_online;
 
 	if (enablestate != enable) {
 		dev_dbg(batt->charger.dev, "cccv is %d, chrgc is %d\n",
@@ -785,10 +784,13 @@ static int mc13xxx_battery_update(struct mc13xxx_battery *batt)
 		 * Don't let the battery become full if power limiting is
 		 * active, as the charge current oscillates as result of the
 		 * power limiting.
+		 * Once battery has hit full and charger still attached
+		 * keep status as full.
 		 */
-		if (!is_powerlimit
+		if ((batt->full_count >= 8) ||
+				(!is_powerlimit
 				&& (batt->battv > pdata->eoc_battery_min_uV)
-				&& (abs(batt->battc) < pdata->eoc_current_max_uA)) {
+				&& (abs(batt->battc) < pdata->eoc_current_max_uA))) {
 
 			batt->full_count++;
 			if (batt->full_count > 8) {
