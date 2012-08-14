@@ -235,12 +235,12 @@ static struct mc13xxx_buttons_platform_data vpr200_pwrbuttons = {
 };
 
 static struct mc13892_battery_platform_data vpr200_battery = {
-	.vchrg = MC13892_BATTERY_VCHRG_4200mV,
+	.vchrg = MC13892_BATTERY_VCHRG_4250mV,
 	.ichrg = MC13892_BATTERY_ICHRG_1200mA,
 	.plim = MC13892_BATTERY_PLIM_1200mW,
 	.battery_nominal_capacity_uAh = 8 * 1000 * 1000,
 	.eoc_battery_min_uV = 4100000,
-	.eoc_current_max_uA = 250000,
+	.eoc_current_max_uA = 400000,
 	.cc_onec_multiplier = 2,
 	.shunt_enable_type = MC13XXX_SHUNT_GPIO_LOW,
 	.shunt_enable_gpio = GPIO_SHUNT_ENABLE,
