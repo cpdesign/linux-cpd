@@ -632,6 +632,7 @@ static int mc13xxx_update_shunt(struct mc13xxx_battery *batt)
 
 static int mc13xxx_battery_update(struct mc13xxx_battery *batt)
 {
+	struct mc13892_battery_platform_data *pdata = batt->mc13892_pdata;
 	int ret, ii;
 	u32 sens0, sens1;
 	u32 chrg_fault;
@@ -784,9 +785,9 @@ static int mc13xxx_battery_update(struct mc13xxx_battery *batt)
 		 * active, as the charge current oscillates as result of the
 		 * power limiting.
 		 */
-		if (!is_powerlimit && batt->cccv
-				&& (batt->battv > 4100000)
-				&& (abs(batt->battc) < 200000)) {
+		if (!is_powerlimit
+				&& (batt->battv > pdata->eoc_battery_min_uV)
+				&& (abs(batt->battc) < pdata->eoc_current_max_uA)) {
 
 			batt->full_count++;
 			if (batt->full_count > 8) {
@@ -1099,7 +1100,6 @@ static int __devinit mc13xxx_battery_probe(struct platform_device *pdev)
 		gpio_request(batt->mc13892_pdata->shunt_sense_gpio,
 				"mc13xxx_shunt_sense");
 	}
-
 
 	queue_delayed_work(batt->workq, &batt->work, HZ * 3);
 
