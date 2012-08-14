@@ -604,7 +604,8 @@ static int mc13xxx_update_shunt(struct mc13xxx_battery *batt)
 	}
 
 	/* cccv is low when current limiting*/
-	enable = batt->charger_online && !batt->cccv;
+	//enable = batt->charger_online && !batt->cccv;
+	enable = 1;
 
 	if (enablestate != enable) {
 		dev_dbg(batt->charger.dev, "cccv is %d, chrgc is %d\n",
