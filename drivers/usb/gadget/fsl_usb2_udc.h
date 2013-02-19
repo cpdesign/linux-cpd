@@ -487,6 +487,8 @@ struct fsl_udc {
 	size_t ep_qh_size;		/* size after alignment adjustment*/
 	dma_addr_t ep_qh_dma;		/* dma address of QH */
 
+	struct ep_td_struct *last_free_td;
+
 	u32 max_pipes;          /* Device max pipes */
 	u32 bus_reset;		/* Device is bus resetting */
 	u32 resume_state;	/* USB state to resume */

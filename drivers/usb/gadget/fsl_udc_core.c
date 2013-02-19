@@ -181,8 +181,13 @@ static void done(struct fsl_ep *ep, struct fsl_req *req, int status)
 		curr_td = next_td;
 		if (j != req->dtd_count - 1) {
 			next_td = curr_td->next_td_virt;
+			dma_pool_free(udc->td_pool, curr_td, curr_td->td_dma);
+		} else {
+			if (udc->last_free_td != NULL)
+				dma_pool_free(udc->td_pool, udc->last_free_td,
+						udc->last_free_td->td_dma);
+			udc->last_free_td = curr_td;
 		}
-		dma_pool_free(udc->td_pool, curr_td, curr_td->td_dma);
 	}
 
 	if (req->mapped) {
@@ -2633,6 +2638,11 @@ static int __exit fsl_udc_remove(struct platform_device *pdev)
 	kfree(udc_controller->status_req->req.buf);
 	kfree(udc_controller->status_req);
 	kfree(udc_controller->eps);
+
+	if (udc_controller->last_free_td != NULL)
+		dma_pool_free(udc_controller->td_pool,
+				udc_controller->last_free_td,
+				udc_controller->last_free_td->td_dma);
 
 	dma_pool_destroy(udc_controller->td_pool);
 	free_irq(udc_controller->irq, udc_controller);
