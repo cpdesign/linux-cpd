@@ -205,8 +205,8 @@ struct usb_sys_interface {
 
 /* bit 11-10 are line status */
 #define  PORTSCX_LINE_STATUS_SE0              0x00000000
-#define  PORTSCX_LINE_STATUS_JSTATE           0x00000400
-#define  PORTSCX_LINE_STATUS_KSTATE           0x00000800
+#define  PORTSCX_LINE_STATUS_KSTATE           0x00000400
+#define  PORTSCX_LINE_STATUS_JSTATE           0x00000800
 #define  PORTSCX_LINE_STATUS_UNDEF            0x00000C00
 #define  PORTSCX_LINE_STATUS_BIT_POS          10
 
