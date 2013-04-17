@@ -190,6 +190,7 @@ static struct map_desc mx35_io_desc[] __initdata = {
 void __init mx35_map_io(void)
 {
 	iotable_init(mx35_io_desc, ARRAY_SIZE(mx35_io_desc));
+	init_consistent_dma_size(24 * SZ_1M);
 }
 
 void __init imx35_init_early(void)
