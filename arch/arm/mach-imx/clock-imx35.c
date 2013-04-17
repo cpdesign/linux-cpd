@@ -613,6 +613,7 @@ static struct clk_lookup lookups[] = {
 	_REGISTER_CLOCK("imx-i2c.1", NULL, i2c2_clk)
 	_REGISTER_CLOCK("imx-i2c.2", NULL, i2c3_clk)
 	_REGISTER_CLOCK(NULL, "iomuxc", iomuxc_clk)
+	_REGISTER_CLOCK("mxc_ipu", NULL, ipu_clk)
 	_REGISTER_CLOCK("ipu-core", NULL, ipu_clk)
 	_REGISTER_CLOCK("mx3_sdc_fb", NULL, ipu_clk)
 	_REGISTER_CLOCK(NULL, "kpp", kpp_clk)
