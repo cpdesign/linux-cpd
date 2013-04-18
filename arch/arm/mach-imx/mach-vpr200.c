@@ -156,6 +156,11 @@ static struct platform_device mx3_fb = {
     },
 };
 
+struct platform_device mxc_v4l2out_device = {
+	.name = "mxc_v4l2_output",
+	.id = 0,
+};
+
 static void vpr200_lcd_power_set(struct plat_lcd_data *pd, unsigned int power)
 {
 	if (power) {
@@ -626,6 +631,8 @@ static void __init vpr200_board_init(void)
 
 	imx35_add_imx_i2c0(&vpr200_i2c0_data);
 	imx35_add_imx_i2c1(&vpr200_i2c0_data);
+
+	mxc_register_device(&mxc_v4l2out_device, 0);
 
 	vpr200_register_backlight();
 
