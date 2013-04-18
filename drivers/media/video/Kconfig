@@ -377,6 +377,24 @@ config VIDEO_VPX3220
 	  To compile this driver as a module, choose M here: the
 	  module will be called vpx3220.
 
+config VIDEO_MXC_CAMERA
+	tristate "MXC Video For Linux Camera"
+	depends on VIDEO_DEV && ARCH_MXC
+	default y
+	---help---
+	  This is the video4linux2 capture driver based on MXC IPU/eMMA module.
+
+source "drivers/media/video/mxc/capture/Kconfig"
+
+config VIDEO_MXC_OUTPUT
+	tristate "MXC Video For Linux Video Output"
+	depends on VIDEO_DEV && ARCH_MXC
+	default y
+	---help---
+	  This is the video4linux2 output driver based on MXC IPU/eMMA module.
+
+source "drivers/media/video/mxc/output/Kconfig"
+
 comment "Video and audio decoders"
 
 config VIDEO_SAA717X
