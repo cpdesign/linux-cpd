@@ -629,3 +629,8 @@ config TILE_SROM
 
 endmenu
 
+config MXC_IIM
+	tristate "MXC IIM device driver"
+	depends on ARCH_MXC
+	help
+	  Support for access to MXC IIM device, most people should say N here.
