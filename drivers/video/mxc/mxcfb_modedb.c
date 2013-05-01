@@ -70,14 +70,14 @@ struct fb_videomode mxcfb_modedb[] = {
 	.refresh	= 60,
 	.xres		= 800,
 	.yres		= 480,
-	.pixclock	= KHZ2PICOS(33260),
+	.pixclock	= KHZ2PICOS(25000),
 	.left_margin	= 50,
 	.right_margin	= 156,
 	.upper_margin	= 10,
 	.lower_margin	= 10,
 	.hsync_len	= 1,	/* note: DE only display */
 	.vsync_len	= 1,	/* note: DE only display */
-	.sync		= 0,
+	.sync		= FB_SYNC_CLK_IDLE_EN | FB_SYNC_CLK_LAT_FALL,
 	.vmode		= FB_VMODE_NONINTERLACED,
 	.flag		= 0,
 	},
