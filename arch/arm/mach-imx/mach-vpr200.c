@@ -33,6 +33,7 @@
 #include <mach/iomux-mx35.h>
 #include <mach/irqs.h>
 #include <mach/audmux.h>
+#include <mach/mxc_iim.h>
 
 #include <linux/i2c.h>
 #include <linux/i2c/at24.h>
@@ -160,6 +161,37 @@ struct platform_device mxc_v4l2out_device = {
 	.name = "mxc_v4l2_output",
 	.id = 0,
 };
+
+static struct resource mxc_iim_resources[] = {
+	{
+		.start = MX35_IIM_BASE_ADDR,
+		.end = MX35_IIM_BASE_ADDR + SZ_16K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	{
+		.start = MX35_INT_IIM,
+		.end = MX35_INT_IIM,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+/*
+ * IIM bank info
+ */
+#define MX35_IIM_BANK_START_ADDR 0x0000
+#define MX35_IIM_BANK_END_ADDR   0x007c
+static struct mxc_iim_data iim_data = {
+	.bank_start = MX35_IIM_BANK_START_ADDR,
+	.bank_end   = MX35_IIM_BANK_END_ADDR,
+};
+
+static struct platform_device mxc_iim_device = {
+	.name = "mxc_iim",
+	.id = 0,
+	.num_resources = ARRAY_SIZE(mxc_iim_resources),
+	.resource = mxc_iim_resources,
+};
+
 
 static void vpr200_lcd_power_set(struct plat_lcd_data *pd, unsigned int power)
 {
@@ -597,6 +629,8 @@ static void __init vpr200_board_init(void)
 
 	mxc_register_device(&mxc_ipu_device, &mx3_ipu_data);
 	mxc_register_device(&mx3_fb, "PT0708048");
+
+	mxc_register_device(&mxc_iim_device, &iim_data);
 
 	platform_add_devices(devices, ARRAY_SIZE(devices));
 
