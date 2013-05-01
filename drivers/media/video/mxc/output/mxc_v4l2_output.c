@@ -1588,6 +1588,9 @@ static int mxc_v4l2out_streamon(vout_data *vout)
 		ipu_update_channel_buffer(vout->display_ch,
 				IPU_INPUT_BUFFER,
 				0, vout->v4l2_bufs[vout->ipu_buf[0]].m.offset);
+		ipu_update_channel_buffer(vout->display_ch,
+				IPU_INPUT_BUFFER,
+				1, vout->v4l2_bufs[vout->ipu_buf[1]].m.offset);
 		if (vout->offset.u_offset || vout->offset.v_offset)
 			/* only update u/v offset */
 			ipu_update_channel_offset(vout->display_ch,
