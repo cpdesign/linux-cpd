@@ -85,50 +85,75 @@ static long vpr200_blink(int state)
 	return 0;
 }
 
-static const struct fb_videomode fb_modedb[] = {
+/*
+ * Use Image Processing Unit and Frame buffer driver from
+ * freescale BSP kernel rather than mainline, in order to
+ * be able to use their mm codecs.
+ */
+static int __init mxc_register_device(struct platform_device *pdev, void *data)
+{
+	int ret;
+
+	pdev->dev.platform_data = data;
+
+	ret = platform_device_register(pdev);
+	if (ret)
+		pr_debug("Unable to register platform device '%s': %d\n",
+			 pdev->name, ret);
+
+	return ret;
+}
+
+struct mxc_ipu_config {
+	int rev;
+	void (*reset) (void);
+	struct clk *di_clk[2];
+	struct clk *csi_clk[2];
+};
+
+static struct mxc_ipu_config mx3_ipu_data = {
+    .rev = 2,
+};
+
+static struct resource ipu_resources[] = {
 	{
-		/* 800x480 @ 60 Hz */
-		.name		= "PT0708048",
-		.refresh	= 60,
-		.xres		= 800,
-		.yres		= 480,
-		.pixclock	= KHZ2PICOS(33260),
-		.left_margin	= 50,
-		.right_margin	= 156,
-		.upper_margin	= 10,
-		.lower_margin	= 10,
-		.hsync_len	= 1,	/* note: DE only display */
-		.vsync_len	= 1,	/* note: DE only display */
-		.sync		= FB_SYNC_OE_ACT_HIGH,
-		.vmode		= FB_VMODE_NONINTERLACED,
-		.flag		= 0,
-	}, {
-		/* 800x480 @ 60 Hz */
-		.name		= "CTP-CLAA070LC0ACW",
-		.refresh	= 60,
-		.xres		= 800,
-		.yres		= 480,
-		.pixclock	= KHZ2PICOS(27000),
-		.left_margin	= 50,
-		.right_margin	= 50,	/* whole line should have 900 clocks */
-		.upper_margin	= 10,
-		.lower_margin	= 10,	/* whole frame should have 500 lines */
-		.hsync_len	= 1,	/* note: DE only display */
-		.vsync_len	= 1,	/* note: DE only display */
-		.sync		= FB_SYNC_CLK_IDLE_EN | FB_SYNC_OE_ACT_HIGH,
-		.vmode		= FB_VMODE_NONINTERLACED,
-		.flag		= 0,
-	}
+	 .start = MX35_IPU_CTRL_BASE_ADDR,
+	 .end = MX35_IPU_CTRL_BASE_ADDR + SZ_4K,
+	 .flags = IORESOURCE_MEM,
+	 },
+	{
+	 .start = MX35_INT_IPU_SYN,
+	 .flags = IORESOURCE_IRQ,
+	 },
+	{
+	 .start = MX35_INT_IPU_ERR,
+	 .flags = IORESOURCE_IRQ,
+	 },
 };
 
-static const struct ipu_platform_data mx3_ipu_data __initconst = {
-	.irq_base = MXC_IPU_IRQ_START,
+static struct platform_device mxc_ipu_device = {
+	.name = "mxc_ipu",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(ipu_resources),
+	.resource = ipu_resources,
 };
 
-static struct mx3fb_platform_data mx3fb_pdata __initdata = {
-	.name		= "PT0708048",
-	.mode		= fb_modedb,
-	.num_modes	= ARRAY_SIZE(fb_modedb),
+static struct resource fb_resources[] = {
+	{
+		.start	= MX35_IPU_CTRL_BASE_ADDR + 0xB4,
+		.end	= MX35_IPU_CTRL_BASE_ADDR + 0x1BF,
+		.flags	= IORESOURCE_MEM,
+	},
+};
+
+static struct platform_device mx3_fb = {
+	.name		= "mxc_sdc_fb",
+	.id		= -1,
+	.num_resources	= ARRAY_SIZE(fb_resources),
+	.resource	= fb_resources,
+	.dev		= {
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+    },
 };
 
 static void vpr200_lcd_power_set(struct plat_lcd_data *pd, unsigned int power)
@@ -565,8 +590,8 @@ static void __init vpr200_board_init(void)
 	imx35_add_imx_uart1(&vpr200_uart1_data);
 	imx35_add_imx_uart2(NULL);
 
-	imx35_add_ipu_core(&mx3_ipu_data);
-	imx35_add_mx3_sdc_fb(&mx3fb_pdata);
+	mxc_register_device(&mxc_ipu_device, &mx3_ipu_data);
+	mxc_register_device(&mx3_fb, "PT0708048");
 
 	platform_add_devices(devices, ARRAY_SIZE(devices));
 
