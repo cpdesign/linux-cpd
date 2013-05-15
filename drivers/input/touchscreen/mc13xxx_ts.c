@@ -41,6 +41,8 @@ struct mc13xxx_ts_priv {
 	struct delayed_work work;
 	struct workqueue_struct *workq;
 
+	int release_count;
+
 	unsigned int sample[4];
 
 	bool (*convert_and_check_samples)(struct mc13xxx_ts_priv *priv,
@@ -53,12 +55,9 @@ static irqreturn_t mc13xxx_ts_handler(int irq, void *data)
 
 	mc13xxx_irq_ack(priv->mc13xxx, irq);
 
-	/*
-	 * Kick off reading coordinates. Note that if work happens already
-	 * be queued for future execution (it rearms itself) it will not
-	 * be rescheduled for immediate execution here. However the rearm
-	 * delay is HZ / 50 which is acceptable.
-	 */
+	priv->release_count = 0;
+
+	cancel_delayed_work(&priv->work);
 	queue_delayed_work(priv->workq, &priv->work, 0);
 
 	return IRQ_HANDLED;
@@ -168,27 +167,55 @@ static bool mc13892_convert_and_check_samples(struct mc13xxx_ts_priv *priv,
 	return true;
 }
 
+/*
+ * There is a possibility that the contact pressure can be reported
+ * at full scale even when the user is still pushing on the
+ * touchscreen really lightly. When this occurs, the initial contact
+ * interrupt is not triggered when the user presses back down again,
+ * but the work has not been requeued so no more samples are read out.
+ *
+ * To get around this, keep re-queueing the work for a while after it
+ * appears the contact has finished.
+ */
 static void mc13xxx_ts_report_sample(struct mc13xxx_ts_priv *priv)
 {
 	struct input_dev *idev = priv->idev;
 	int x, y, pressure;
+	unsigned long delay = HZ / 50;
 
 	if (priv->convert_and_check_samples(priv, &x, &y, &pressure)) {
 		if (pressure) {
 			input_report_abs(idev, ABS_X, x);
 			input_report_abs(idev, ABS_Y, y);
+			input_report_abs(idev, ABS_PRESSURE, pressure);
+			input_report_key(idev, BTN_TOUCH, pressure ? 1 : 0);
+			input_sync(idev);
 
 			dev_dbg(&idev->dev, "report (%d, %d, %d)\n",
 					x, y, pressure);
-			queue_delayed_work(priv->workq, &priv->work, HZ / 50);
-		} else
-			dev_dbg(&idev->dev, "report release\n");
+			priv->release_count = 0;
+		} else {
+			if (++priv->release_count == 2) {
+				dev_dbg(&idev->dev, "report release\n");
+				input_report_abs(idev, ABS_PRESSURE, pressure);
+				input_report_key(idev, BTN_TOUCH, pressure ? 1 : 0);
+				input_sync(idev);
+			}
+		}
 
-		input_report_abs(idev, ABS_PRESSURE, pressure);
-		input_report_key(idev, BTN_TOUCH, pressure ? 1 : 0);
-		input_sync(idev);
-	} else
+	} else {
 		dev_dbg(&idev->dev, "discard event\n");
+	}
+
+	/* ramp down the update rate */
+	if (priv->release_count > 4) {
+		delay = HZ;
+	}
+
+	/* after a while, stop updating altogether */
+	if (priv->release_count < 10) {
+		queue_delayed_work(priv->workq, &priv->work, delay);
+	}
 }
 
 static void mc13xxx_ts_work(struct work_struct *work)
