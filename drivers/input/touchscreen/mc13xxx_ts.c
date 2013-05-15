@@ -116,7 +116,7 @@ static bool mc13783_convert_and_check_samples(struct mc13xxx_ts_priv *priv,
  * below TOUCHED_ADC_THRESH. We don't use the full scale of the ADC because
  * the touchscreen doesn't always read 0xfff when the ts is not touched.
  */
-#define TOUCHED_ADC_THRESH 2048
+#define TOUCHED_ADC_THRESH 3600
 static bool mc13892_convert_and_check_samples(struct mc13xxx_ts_priv *priv,
 		int *x, int *y, int *pressure)
 {
@@ -225,7 +225,7 @@ static void mc13xxx_ts_work(struct work_struct *work)
 	unsigned int mode = MC13XXX_ADC_MODE_TS;
 	unsigned int channel = 12;
 	u32 adc1_mask = MC13XXX_ADC1_ATOX | MC13XXX_ADC1_ATO_MASK;
-	u32 adc1_val = MC13XXX_ADC1_ATOX | (3 << MC13XXX_ADC1_ATO_SHIFT);
+	u32 adc1_val = MC13XXX_ADC1_ATOX | (6 << MC13XXX_ADC1_ATO_SHIFT);
 
 	if (mc13xxx_adc_do_conversion_ex(priv->mc13xxx,
 				mode, channel, priv->sample,
