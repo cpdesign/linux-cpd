@@ -43,6 +43,7 @@
 
 #include <video/platform_lcd.h>
 #include <video/isl22316_bl.h>
+#include <video/isl22346_bl.h>
 
 #include "devices-imx35.h"
 
@@ -51,6 +52,8 @@
 
 #define VPR200_BOARD_V2		0x01
 #define VPR200_BOARD_V3		0x02
+#define VPR200_BOARD_V4		0x03
+#define VPR200_BOARD_V5		0x04
 
 #define GPIO_LCDPWR	IMX_GPIO_NR(1, 2)
 #define GPIO_LEDPWR	IMX_GPIO_NR(2, 7)
@@ -359,6 +362,8 @@ static struct i2c_board_info vpr200_bus1_devices[] = {
 	{
 		I2C_BOARD_INFO("bmp085", 0x77),
 	}, {
+		I2C_BOARD_INFO("bmp280", 0x76),
+	}, {
 		I2C_BOARD_INFO("pcm1774", 0x47),
 	},
 };
@@ -373,13 +378,26 @@ static struct isl22316_bl_platform_data isl_data = {
 	.enable_gpio = GPIO_LEDPWR,
 };
 
+static struct isl22346_bl_platform_data isl_data_v5 = {
+	.inverted = 0,
+	.enable_type = ISL22346_BL_ENABLE_GPIO_HIGH,
+	.enable_gpio = GPIO_LEDPWR,
+};
+
 static struct i2c_board_info vpr200_backlight_info = {
 		I2C_BOARD_INFO("isl22316", 0x2b),
 		.platform_data = &isl_data,
 };
 
+static struct i2c_board_info vpr200_backlight_info_v5 = {
+		I2C_BOARD_INFO("isl22346", 0x50),
+		.platform_data = &isl_data_v5,
+};
+
 static int vpr200_register_backlight(void)
 {
+	struct i2c_board_info *p_info = 0;
+
 	if (VPR200_BOARD_REV == VPR200_BOARD_V2) {
 		pr_info("%s: Using legacy backlight settings\n", __func__);
 		isl_data.inverted = 1;
@@ -387,7 +405,13 @@ static int vpr200_register_backlight(void)
 		pr_info("%s: Using normal backlight settings\n", __func__);
 	}
 
-	return i2c_register_board_info(1, &vpr200_backlight_info, 1);
+	if (VPR200_BOARD_REV <= VPR200_BOARD_V4) {
+		p_info = &vpr200_backlight_info;
+	} else {
+		p_info = &vpr200_backlight_info_v5;
+	}
+
+	return i2c_register_board_info(1, p_info, 1);
 }
 
 static struct imxuart_platform_data vpr200_uart1_data = {

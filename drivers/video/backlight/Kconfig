@@ -348,6 +348,11 @@ config BACKLIGHT_ISL22316
 	help
 	  Say Y to enable backlight support based on isl22316 digital pot.
 
+config BACKLIGHT_ISL22346
+	tristate "Backlight driver for ISL22346"
+	depends on I2C
+	help
+	  Say Y to enable backlight support based on isl22346 digital pot.
 endif # BACKLIGHT_CLASS_DEVICE
 
 endif # BACKLIGHT_LCD_SUPPORT
